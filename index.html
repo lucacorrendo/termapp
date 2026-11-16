@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TermApp</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F4F1EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12110F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="TermApp">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F4F1EC;
+    --card: #FFFFFF;
+    --ink: #1D1A16;
+    --muted: #7A736A;
+    --line: #E6E0D7;
+    --soft: #EFEAE3;
+    --heat: #E5602A;
+    --heat-soft: rgba(229, 96, 42, 0.14);
+    --cool: #3B7EA8;
+    --ok: #3E8E5B;
+    --radius: 22px;
+    --shadow: 0 1px 2px rgba(30, 25, 20, .04), 0 6px 24px rgba(30, 25, 20, .06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12110F; --card: #1C1A17; --ink: #F3EFE9; --muted: #9C948A;
+      --line: #2C2925; --soft: #25221E; --heat: #F07139; --heat-soft: rgba(240, 113, 57, .18);
+      --cool: #6FB0D8; --ok: #6CC08A; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-feature-settings: 'tnum' 1;
+    padding: calc(env(safe-area-inset-top) + 8px) 16px calc(env(safe-area-inset-bottom) + 32px);
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  .grid { display: grid; gap: 16px; }
+  .col { display: grid; gap: 16px; align-content: start; }
+  @media (min-width: 860px) { .tgrid { grid-template-columns: 380px 1fr; align-items: start; } }
+  .page { display: none; }
+  .page.show { display: block; animation: fade .18s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  #pageStatistiche .card { max-width: 980px; margin: 0 auto; }
+  .head-right { display: flex; align-items: center; gap: 8px; }
+  .nav { display: flex; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 3px; gap: 2px; }
+  .nav button {
+    display: flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--muted);
+    font: inherit; font-weight: 700; font-size: 13px; padding: 8px 10px; border-radius: 11px; cursor: pointer;
+  }
+  .nav button svg { width: 20px; height: 20px; }
+  .nav button.active { background: var(--ink); color: var(--bg); }
+  .nav button span { display: none; }
+  @media (min-width: 640px) { .nav button span { display: inline; } }
+
+  header { display: flex; align-items: center; justify-content: space-between; padding: 10px 2px 18px; }
+  .brand { font-weight: 800; font-size: 22px; letter-spacing: -.02em; display: flex; align-items: center; gap: 8px; }
+  .ver { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--soft); border-radius: 6px; padding: 2px 6px; letter-spacing: 0; }
+  .ver.warn { color: #fff; background: #D93A2F; }
+  .brand i { width: 10px; height: 10px; border-radius: 50%; background: var(--heat); display: inline-block; }
+  .status { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); margin-top: 2px; padding-left: 18px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); display: inline-block; margin-right: 6px; }
+  .dot.off { background: #C0392B; }
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
+    color: var(--ink); display: grid; place-items: center; cursor: pointer;
+  }
+  .icon-btn.spin svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; border: 1px solid var(--line); }
+  .card h2 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+
+  .banner { background: var(--heat-soft); color: var(--ink); border-radius: 14px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
+
+  /* Dial */
+  .dial-wrap { position: relative; width: 260px; height: 230px; margin: 4px auto 0; }
+  .dial-wrap svg { width: 100%; height: 100%; overflow: visible; }
+  .dial-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 8px; }
+  .temp-big { font-size: 64px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+  .temp-big sup { font-size: 26px; font-weight: 600; vertical-align: top; margin-left: 2px; position: relative; top: 8px; }
+  .target { margin-top: 8px; font-size: 14px; color: var(--muted); }
+  .target b { color: var(--ink); font-weight: 700; }
+  .chip {
+    margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+    border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--soft); color: var(--muted);
+  }
+  .chip.on { background: var(--heat-soft); color: var(--heat); }
+  .chip svg { width: 14px; height: 14px; }
+
+  .stepper { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 6px 0 4px; }
+  .step-btn {
+    width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--line); background: var(--soft);
+    font-size: 28px; font-weight: 500; color: var(--ink); cursor: pointer; display: grid; place-items: center;
+    transition: transform .08s ease;
+  }
+  .step-btn:active { transform: scale(.94); }
+  .step-btn:disabled { opacity: .35; cursor: default; }
+  .send-state { min-width: 90px; text-align: center; font-size: 13px; color: var(--muted); }
+
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+  .fact { background: var(--soft); border-radius: 14px; padding: 12px; }
+  .fact .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
+  .fact .v { font-size: 20px; font-weight: 700; margin-top: 4px; letter-spacing: -.02em; }
+  .fact .v small { font-size: 13px; font-weight: 600; color: var(--muted); }
+
+  /* Segmented */
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--soft); border-radius: 14px; padding: 4px; gap: 4px; }
+  .seg button {
+    border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 700; font-size: 13px;
+    padding: 10px 6px; border-radius: 10px; cursor: pointer;
+  }
+  .seg button.active { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .seg button.active.off { color: #C0392B; }
+
+  .panel { margin-top: 14px; padding: 14px; border-radius: 14px; background: var(--soft); display: none; }
+  .panel.show { display: block; }
+  .mini-step { display: flex; align-items: center; gap: 10px; }
+  .mini-step button { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font-size: 18px; cursor: pointer; }
+  .mini-step span { min-width: 64px; text-align: center; font-weight: 700; }
+  .btn {
+    border: 0; background: var(--ink); color: var(--bg); font: inherit; font-weight: 700; font-size: 14px;
+    padding: 12px 16px; border-radius: 12px; cursor: pointer; width: 100%; margin-top: 12px;
+  }
+
+  .toggle { position: relative; width: 46px; height: 28px; border-radius: 999px; background: var(--line); border: 0; cursor: pointer; transition: background .15s; }
+  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .toggle.on { background: var(--ink); }
+  .toggle.on::after { transform: translateX(18px); }
+
+  /* Report */
+  .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 16px 0 6px; }
+  @media (min-width: 560px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+  .chart { position: relative; margin-top: 10px; }
+  .chart svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .tip {
+    position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12px;
+    padding: 8px 10px; border-radius: 10px; white-space: nowrap; transform: translate(-50%, -110%); opacity: 0; transition: opacity .1s;
+    line-height: 1.45;
+  }
+  .note { font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.5; }
+  .empty { padding: 40px 0; text-align: center; color: var(--muted); font-size: 14px; }
+
+  /* Card per modalità */
+  .mode-card { display: none; }
+  .mode-card.show { display: block; }
+  .timer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+  .small-btn { width: 44px; height: 44px; font-size: 22px; }
+  .timer-val { text-align: center; display: flex; flex-direction: column; gap: 2px; }
+  .timer-val b { font-size: 26px; letter-spacing: -.02em; }
+  #timerBox.disabled { opacity: .35; pointer-events: none; }
+  .holiday-end { margin-top: 14px; background: var(--soft); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 2px; }
+  .holiday-end b { font-size: 22px; letter-spacing: -.02em; }
+  .date-in { font: inherit; font-weight: 700; color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; }
+
+  /* Programma */
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 14px; }
+  .days button {
+    border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-weight: 700; font-size: 12px;
+    padding: 9px 0; border-radius: 12px; cursor: pointer; position: relative;
+  }
+  .days button.sel { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .days button.today::after { content: ''; position: absolute; bottom: 3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--heat); }
+  .days button.pick { outline: 2px solid var(--heat); outline-offset: -2px; }
+  .timeline { position: relative; height: 34px; border-radius: 10px; overflow: hidden; margin-top: 16px; background: var(--soft); }
+  .timeline div { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.95); border-right: 2px solid var(--card); }
+  .timeline .now { width: 2px; background: var(--ink); border: 0; z-index: 2; }
+  .tl-axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 4px; padding: 0 1px; }
+  .slot { display: grid; grid-template-columns: 6px 1fr auto; align-items: center; column-gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); background: var(--card); position: relative; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+  .slot-wrap { position: relative; overflow: hidden; }
+  .slot-wrap:last-child .slot { border-bottom: 0; }
+  .slot-bg { position: absolute; inset: 0; background: #D93A2F; opacity: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; color: #fff; }
+  .slot-bg .trash { width: 24px; height: 24px; transition: transform .15s; }
+  .slot-bg .trash svg { width: 100%; height: 100%; }
+  .slot-wrap.oltre .slot-bg .trash { transform: scale(1.3); }
+  .slot.anima { transition: transform .22s ease; }
+  .slot-wrap.via { transition: height .2s ease, opacity .2s ease; }
+  .tbtn { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 72px; padding: 7px 10px;
+    background: var(--soft); border: 1px solid var(--line); border-radius: 10px; font-weight: 700; font-size: 16px; cursor: pointer; }
+  .tbtn.err { border-color: #D93A2F; color: #D93A2F; }
+  .tbtn input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; cursor: pointer; font-size: 16px; }
+  .mini-step.ro { gap: 10px; }
+  .slot .sw { align-self: stretch; height: auto !important; }
+  .slot.readonly { cursor: pointer; opacity: .78; }
+  .slot.readonly:hover { opacity: 1; }
+  .start-ro { width: 62px; flex: 0 0 62px; text-align: center; font-weight: 700; font-size: 15px; display: flex; flex-direction: column; line-height: 1.05; }
+  .start-ro small, .range .end small { font-size: 10px; font-weight: 600; color: var(--muted); }
+  .ro-go { color: var(--muted); font-size: 20px; text-align: center; }
+  .slot.readonly .mini-step { padding-right: 4px; }
+  .slot.readonly .start-ro { min-width: 72px; }
+  .slot .mini-step { gap: 6px; }
+  .slot .mini-step button { width: 30px; height: 30px; }
+  .range { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .range .dash { color: var(--muted); font-weight: 700; }
+  .range .end { font-weight: 700; font-size: 15px; white-space: nowrap; display: flex; flex-direction: column; line-height: 1.05; }
+  .range .end small { font-size: 10px; font-weight: 600; color: var(--muted); }
+  .tval { min-width: 50px !important; padding: 5px 0; border-radius: 9px; font-size: 14px; }
+  .prog-legend i { height: 10px !important; width: 10px !important; border-radius: 3px !important; }
+  .slot:last-child { border-bottom: 0; }
+  .slot .sw { width: 8px; height: 34px; border-radius: 4px; }
+  .slot input[type=time] {
+    font: inherit; font-weight: 700; font-size: 16px; color: var(--ink); background: var(--soft); border: 1px solid var(--line);
+    border-radius: 10px; padding: 6px 2px; width: 62px; flex: 0 0 62px; text-align: center; cursor: pointer; font-size: 15px !important;
+  }
+  .slot input.err { border-color: #C0392B; }
+  .slot input[type=time]::-webkit-calendar-picker-indicator { display: none; }
+  .slot input[type=time]::-webkit-datetime-edit { padding: 0; }
+  .slot input[type=time]::-webkit-datetime-edit-ampm-field { display: none; }
+  .del { width: 26px; height: 30px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); font-size: 18px; cursor: pointer; }
+  .del:disabled { opacity: .25; cursor: default; }
+  .btn-ghost { border: 1px dashed var(--line); background: transparent; color: var(--ink); font: inherit; font-weight: 700; font-size: 13px; padding: 10px 12px; border-radius: 12px; cursor: pointer; flex: 1; }
+  .btn-ghost:disabled { opacity: .4; cursor: default; }
+  .btn.secondary { background: var(--soft); color: var(--ink); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .quick { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .quick button { border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+  .next { margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .dirty-note { font-size: 12px; color: var(--heat); font-weight: 700; }
+
+  .eff-wrap { margin-top: 18px; padding: 16px; border-radius: 16px; background: var(--soft); }
+  .eff-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .eff-head b { font-size: 15px; }
+  .gauge { position: relative; height: 12px; border-radius: 6px; margin: 14px 0 6px;
+    background: linear-gradient(90deg, #D93A2F 0 50%, #EE8A2A 50% 65%, #4DB26A 65% 100%); }
+  .gauge .mk { position: absolute; top: -5px; width: 4px; height: 22px; border-radius: 2px; background: var(--ink); transform: translateX(-2px); box-shadow: 0 0 0 2px var(--soft); }
+  .gauge .avg { position: absolute; top: -3px; bottom: -3px; width: 0; border-left: 2px dashed var(--ink); opacity: .45; }
+  .eff-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); }
+  .eff-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+
+  .setup { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: none; overflow-y: auto;
+    padding: calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 24px); }
+  .setup.show { display: block; }
+  .setup-box { max-width: 440px; margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
+  .fld { display: block; font-size: 13px; font-weight: 700; margin-top: 12px; }
+  .fld input { display: block; width: 100%; margin-top: 6px; font: inherit; font-weight: 500; font-size: 15px; color: var(--ink); background: var(--soft);
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .setup-err { color: #D93A2F; font-size: 13px; font-weight: 700; min-height: 18px; margin-top: 10px; }
+  .linkbtn { background: none; border: 0; color: #D93A2F; font: inherit; font-size: 13px; font-weight: 700; margin-top: 14px; cursor: pointer; padding: 0; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 20px); transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-size: 14px; font-weight: 600;
+    opacity: 0; transition: all .2s ease; pointer-events: none; z-index: 10; max-width: 90vw;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .skeleton { opacity: .45; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand"><i></i>TermApp <span class="ver" id="ver">v2.1</span></div>
+      <div class="status"><span id="statusText"><span class="dot"></span>Connessione…</span></div>
+    </div>
+    <div class="head-right">
+      <nav class="nav" id="nav">
+        <button data-page="termostato" class="active" aria-label="Termostato" title="Termostato">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V4.5a2 2 0 0 0-4 0v10.26a4 4 0 1 0 4 0z"/><path d="M12 10v7"/></svg>
+          <span>Termostato</span>
+        </button>
+        <button data-page="statistiche" aria-label="Statistiche" title="Statistiche">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+          <span>Statistiche</span>
+        </button>
+      </nav>
+      <button class="icon-btn" id="settingsBtn" aria-label="Impostazioni">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button class="icon-btn" id="refreshBtn" aria-label="Aggiorna">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="demoBanner" class="banner" style="display:none">Anteprima con dati di esempio: i comandi non raggiungono il termostato.</div>
+
+  <!-- Pagina Termostato -->
+  <div class="page show" id="pageTermostato">
+    <div class="grid tgrid">
+      <div class="col">
+      <section class="card" id="controlCard">
+        <div class="row">
+          <h2 id="deviceName">Termostato</h2>
+          <span class="small muted" id="modeLabel"></span>
+        </div>
+        <div class="dial-wrap">
+          <svg id="dial" viewBox="0 0 260 230"></svg>
+          <div class="dial-center">
+            <div class="temp-big" id="tempNow">--<sup>°</sup></div>
+            <div class="target">Obiettivo <b id="tempSet">--</b></div>
+            <div class="next" id="nextChange"></div>
+            <div class="chip" id="boilerChip">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3.2-1.6 4.8-1.6 7.6 0 1.3.9 2.2 2 2.2 1.4 0 2.1-1.2 1.8-3 2.6 1.6 4.3 4.3 4.3 7.2A6.5 6.5 0 0 1 12 22a6.5 6.5 0 0 1-6.5-6c0-4 3.3-6.3 4.6-9.1C10.9 5.1 11.6 3.6 12 2z"/></svg>
+              <span id="boilerText">Caldaia</span>
+            </div>
+          </div>
+        </div>
+        <div class="stepper">
+          <button class="step-btn" id="minusBtn" aria-label="Abbassa">−</button>
+          <div class="send-state" id="sendState">&nbsp;</div>
+          <button class="step-btn" id="plusBtn" aria-label="Alza">+</button>
+        </div>
+        <div class="facts">
+          <div class="fact"><div class="k">Esterna</div><div class="v" id="factExt">--</div></div>
+          <div class="fact"><div class="k">Oggi</div><div class="v" id="factHours">--</div></div>
+          <div class="fact"><div class="k">Accensioni</div><div class="v" id="factCount">--</div></div>
+        </div>
+      </section>
+
+      </div>
+      <div class="col">
+      <section class="card">
+        <h2 style="margin-bottom:12px">Modalità</h2>
+        <div class="seg" id="modeSeg">
+          <button data-mode="auto">Programma</button>
+          <button data-mode="manual">Manuale</button>
+          <button data-mode="holiday">Vacanza</button>
+          <button data-mode="off">Spento</button>
+        </div>
+        <div class="row" style="margin-top:16px">
+          <span class="small">Blocco tasti sul termostato</span>
+          <button class="toggle" id="lockToggle" aria-label="Blocco tasti"></button>
+        </div>
+      </section>
+
+      <section class="card mode-card" id="manualCard">
+        <div class="row">
+          <h2>Manuale</h2>
+          <span id="manualStatus" class="small muted"></span>
+        </div>
+        <p class="small muted" style="margin:8px 0 14px">La temperatura si imposta con − / + in alto. Allo scadere del timer il termostato torna al programma settimanale.</p>
+        <div class="row">
+          <span class="small"><b>Termina automaticamente</b></span>
+          <button class="toggle on" id="timerToggle" aria-label="Timer manuale"></button>
+        </div>
+        <div id="timerBox">
+          <div class="timer">
+            <button class="step-btn small-btn" id="timerMinus" aria-label="Meno 30 minuti">−</button>
+            <div class="timer-val"><b id="timerDur">1 h 00</b><span id="timerEnd" class="small muted"></span></div>
+            <button class="step-btn small-btn" id="timerPlus" aria-label="Più 30 minuti">+</button>
+          </div>
+          <div class="tl-axis"><span>30 min</span><span>8 ore</span></div>
+        </div>
+        <button class="btn" id="manualGo">Attiva manuale</button>
+      </section>
+
+      <section class="card mode-card" id="holidayCard">
+        <div class="row">
+          <h2>Vacanza</h2>
+          <span id="holidayStatus" class="small muted"></span>
+        </div>
+        <div class="holiday-end">
+          <span class="small muted">Termina il</span>
+          <b id="hEnd">--</b>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <span class="small">Temperatura</span>
+          <div class="mini-step"><button data-h="t-">−</button><span id="hTemp">--</span><button data-h="t+">+</button></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <span class="small">Durata</span>
+          <div class="mini-step"><button data-h="d-">−</button><span id="hDays">--</span><button data-h="d+">+</button></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <span class="small">Oppure scegli la data</span>
+          <input type="date" id="hDate" class="date-in">
+        </div>
+        <button class="btn" id="holidayGo">Attiva vacanza</button>
+      </section>
+
+      <section class="card mode-card" id="progCard">
+        <div class="row">
+          <h2>Programma settimanale</h2>
+          <span id="progStatus" class="small muted"></span>
+        </div>
+        <div class="days" id="days"></div>
+        <div class="timeline" id="timeline"></div>
+        <div class="tl-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+        <div class="legend prog-legend" id="progLegend"></div>
+        <div class="small muted" style="margin-top:12px">Tocca l'orario di inizio per cambiarlo: la fascia termina quando inizia la successiva. Trascina una fascia di lato per eliminarla.</div>
+        <div id="slots" style="margin-top:8px"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn-ghost" id="addSlot">+ Aggiungi fascia</button>
+          <button class="btn-ghost" id="copyBtn">Copia su altri giorni</button>
+        </div>
+        <div class="panel" id="copyPanel">
+          <div class="small">Tocca i giorni su cui copiare <b id="copyFrom"></b>:</div>
+          <div class="days" id="copyDays" style="margin-top:10px"></div>
+          <div class="quick">
+            <button data-q="feriali">Lun–Ven</button><button data-q="weekend">Sab–Dom</button><button data-q="tutti">Tutti</button><button data-q="nessuno">Nessuno</button>
+          </div>
+          <button class="btn" id="copyGo">Copia</button>
+        </div>
+        <div class="row" style="gap:8px">
+          <button class="btn secondary" id="progReset" disabled>Annulla</button>
+          <button class="btn" id="progSave" disabled>Salva sul termostato</button>
+        </div>
+      </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagina Statistiche -->
+  <div class="page" id="pageStatistiche">
+    <section class="card">
+      <div class="row">
+        <h2>Statistiche · consumi e temperature</h2>
+      </div>
+      <div class="seg" id="rangeSeg" style="margin-top:14px">
+        <button data-range="24h" class="active">24 ore</button>
+        <button data-range="7">7 giorni</button>
+        <button data-range="30">30 giorni</button>
+      </div>
+      <div class="kpis" id="kpis"></div>
+      <div class="chart" id="chart"><div class="empty">Caricamento…</div></div>
+      <div class="legend" id="legend"></div>
+      <div id="effBox"></div>
+      <p class="note"><b>Efficienza (0–100)</b>: confronta quanto lavora la caldaia con la differenza tra temperatura interna ed esterna. <b>75 corrisponde alla tua media</b>, calcolata sugli ultimi 30 giorni: valori più alti significano meno consumo del solito a parità di freddo, valori bassi indicano dispersioni (una finestra aperta, ad esempio). Verde da 65 in su, arancione 50–64, rosso sotto 50. Non si calcola quando fuori fa poco più freddo che in casa (meno di 3 °C di differenza).<br>Lo stato della caldaia arriva dal termostato; la storia dei giorni si costruisce dal giorno in cui è partita la raccolta dati.</p>
+    </section>
+  </div>
+</div>
+<div class="setup" id="setup">
+  <div class="setup-box">
+    <div class="brand" style="margin-bottom:6px"><i></i>TermApp</div>
+    <p class="small muted" style="margin:0 0 16px">Collega l'app al tuo script. Indirizzo e chiave restano solo su questo telefono.</p>
+    <label class="fld">Indirizzo dello script
+      <input id="cfgUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec">
+    </label>
+    <label class="fld">Chiave
+      <input id="cfgKey" type="password" autocomplete="off" spellcheck="false" placeholder="incolla la chiave generata nel foglio">
+    </label>
+    <div class="setup-err" id="cfgErr"></div>
+    <button class="btn" id="cfgGo">Collega</button>
+    <div class="row" style="margin-top:10px;gap:8px">
+      <button class="btn secondary" id="cfgDemo" style="margin-top:0">Prova con dati di esempio</button>
+      <button class="btn secondary" id="cfgClose" style="margin-top:0;display:none">Chiudi</button>
+    </div>
+    <button class="linkbtn" id="cfgForget" style="display:none">Scollega questo telefono</button>
+    <p class="small muted" style="margin-top:16px">L'indirizzo lo trovi in Apps Script → Esegui il deployment → Gestisci deployment (finisce con /exec). La chiave nel foglio: menu TermApp → Genera chiave per l'app.</p>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------------- API: reale (Apps Script) o anteprima ---------------- */
+  /* ---------------- Configurazione (indirizzo script + chiave, solo su questo dispositivo) ---------------- */
+  const CFG_KEY = 'termapp_cfg';
+  function leggiCfg() { try { return JSON.parse(localStorage.getItem(CFG_KEY)) || null; } catch (e) { return null; } }
+  function salvaCfg(c) { try { c ? localStorage.setItem(CFG_KEY, JSON.stringify(c)) : localStorage.removeItem(CFG_KEY); } catch (e) { } }
+  let CFG = leggiCfg();
+  let DEMO = false;
+  const isReal = () => !!CFG && !DEMO;
+  // REAL è letto in vari punti per i tempi di attesa: lo teniamo come getter
+  const STATO = { get real() { return isReal(); } };
+  const VERSIONE = '2.1';
+
+  const AZIONE = { apiDashboard: 'dashboard', apiStorico: 'storico', apiComandi: 'comandi', apiSalvaProgramma: 'salvaProgramma', ping: 'ping' };
+
+  async function chiamaScript(cfg, azione, args) {
+    let r;
+    try {
+      // text/plain evita il preflight CORS, che Apps Script non gestisce
+      r = await fetch(cfg.url, { method: 'POST', redirect: 'follow', body: JSON.stringify({ chiave: cfg.chiave, azione, args }) });
+    } catch (e) {
+      throw new Error(navigator.onLine === false ? 'Sei offline' : 'Impossibile raggiungere lo script (controlla l\'indirizzo e che l\'accesso sia "Chiunque")');
+    }
+    let j;
+    try { j = await r.json(); } catch (e) { throw new Error('Risposta non valida dallo script (deployment aggiornato?)'); }
+    if (j.errore) { const err = new Error(j.errore); err.codice = j.codice; throw err; }
+    return j.dati;
+  }
+
+  async function call(fn, ...args) {
+    if (!isReal()) return Demo[fn](...args);
+    try {
+      return await chiamaScript(CFG, AZIONE[fn], args);
+    } catch (e) {
+      if (e.codice === 'chiave') apriSetup('La chiave non è più valida: inserisci quella attuale.');
+      throw e;
+    }
+  }
+
+  const Demo = (() => {
+    const H = 3600e3;
+    const now = Date.now();
+    let st = { nome: 'NEVE PRO W', online: true, temp: 19.0, set: 17.0, mode: 'auto', acceso: true,
+      holidayTemp: 10, holidayDays: 3, countdownMin: null, temporaryMin: 60, vacanzaInizio: null, childLock: false, caldaia: false, stimata: false, tEsterna: 6.4, umidita: 78, aggiornato: now,
+      programma: [
+        [{h:8,m:0,t:19.5},{h:8,m:45,t:17},{h:18,m:30,t:19.7},{h:22,m:30,t:16}],
+        [{h:8,m:0,t:19.5},{h:8,m:45,t:17},{h:18,m:30,t:19.7},{h:22,m:30,t:16}],
+        [{h:8,m:0,t:19.5},{h:8,m:45,t:17},{h:18,m:30,t:19.7},{h:22,m:30,t:16}],
+        [{h:7,m:55,t:19.5},{h:8,m:30,t:17},{h:18,m:30,t:19.7},{h:22,m:30,t:16}],
+        [{h:8,m:0,t:19.5},{h:8,m:45,t:16}],
+        [{h:8,m:50,t:19.5},{h:9,m:20,t:16}],
+        [{h:18,m:0,t:17.5},{h:19,m:0,t:18.5},{h:20,m:0,t:19.8},{h:22,m:30,t:16}],
+      ] };
+
+    function programma(ts) {
+      const h = new Date(ts).getHours() + new Date(ts).getMinutes() / 60;
+      return (h >= 6 && h < 8.5) || (h >= 17 && h < 22.5) ? 20 : 17;
+    }
+    function giornata() {
+      const temp = [], set = [], est = [], acc = [];
+      let T = 18.6, on = false, accStart = null;
+      for (let ts = now - 24 * H; ts <= now; ts += 5 * 60e3) {
+        const sp = programma(ts);
+        const h = new Date(ts).getHours();
+        const ext = 5 + 4 * Math.sin((h - 9) / 24 * 2 * Math.PI);
+        if (!on && T <= sp - 0.3) { on = true; accStart = ts; }
+        if (on && T >= sp) { on = false; acc.push([accStart, ts]); }
+        T += on ? 0.12 : -(T - ext) * 0.0035;
+        temp.push([ts, Math.round(T * 10) / 10]);
+        set.push([ts, sp]);
+        if (ts % H < 5 * 60e3) est.push([ts, Math.round(ext * 10) / 10]);
+      }
+      if (on) acc.push([accStart, now]);
+      st.temp = temp[temp.length - 1][1]; st.set = programma(now); st.caldaia = on;
+      return { temp, set, est, acc };
+    }
+    const g = giornata();
+    const delay = v => new Promise(r => setTimeout(() => r(JSON.parse(JSON.stringify(v))), 350));
+    return {
+      apiDashboard() {
+        const mezzanotte = new Date(); mezzanotte.setHours(0, 0, 0, 0);
+        const oggi = g.acc.filter(a => a[1] > mezzanotte.getTime());
+        const ore = oggi.reduce((s, a) => s + (a[1] - Math.max(a[0], mezzanotte.getTime())), 0) / H;
+        return delay({ stato: st, oggi: { ore: Math.round(ore * 100) / 100, accensioni: oggi.length },
+          serie: { temp: g.temp, set: g.set, est: g.est }, accensioni: g.acc,
+          efficienza: { indice: 78, k: 0.0205, kRif: 0.0213, provvisorio: false, giorniRif: 30, tInt: 18.4, tEst: 5.1, motivo: '' } });
+      },
+      apiStorico(n) {
+        const out = [];
+        for (let i = n - 1; i >= 0; i--) {
+          const d = new Date(now - i * 24 * H);
+          const tEst = Math.round((6 + 5 * Math.sin(i / 4) + (Math.random() - .5) * 2) * 10) / 10;
+          const gg = Math.max(0, 20 - tEst);
+          out.push({ data: d.toISOString().slice(0, 10), ore: Math.round((gg * 0.42 + Math.random() * .8) * 100) / 100,
+            n: Math.round(gg * 1.3 + 4), tInt: Math.round((18.6 + Math.random() * .6) * 10) / 10, set: 18.4,
+            tEst, gg: Math.round(gg * 10) / 10, copertura: 24,
+            eff: i === 3 ? 44 : Math.round(70 + Math.random() * 16) });
+        }
+        return delay({ giorni: out, riferimento: { k: 0.0213, n: 30, provvisorio: false } });
+      },
+      apiComandi(lista) {
+        lista.forEach(c => {
+          // come il termostato reale: cambiare temperatura in programma passa in manuale,
+          // tornare al programma riprende la temperatura della fascia
+          if (c.code === 'temp_set') { st.set = c.value; if (st.mode === 'auto') st.mode = 'manual'; }
+          if (c.code === 'mode') { st.mode = c.value; if (c.value === 'auto') st.set = programma(Date.now()); }
+          if (c.code === 'switch') st.acceso = c.value;
+          if (c.code === 'child_lock') st.childLock = c.value;
+          if (c.code === 'holiday_temp_set') st.holidayTemp = c.value;
+          if (c.code === 'holiday_days_set') st.holidayDays = c.value;
+          if (c.code === 'temporary_time') { st.temporaryMin = c.value; st.countdownMin = c.value; }
+          if (c.code === 'mode' && c.value === 'holiday') st.vacanzaInizio = Date.now();
+        });
+        return delay({ ok: true });
+      },
+      ping() { return delay({ ok: true, versione: '2.1' }); },
+      apiSalvaProgramma(giorni) { st.programma = JSON.parse(JSON.stringify(giorni)); return delay({ ok: true, programma: st.programma }); },
+    };
+  })();
+
+  /* ---------------- Utilità ---------------- */
+  const $ = id => document.getElementById(id);
+  const fmt = (v, d = 1) => (v === null || v === undefined || isNaN(v)) ? '--' : Number(v).toFixed(d).replace('.', ',');
+  const fmtOre = h => {
+    if (h === null || h === undefined) return '--';
+    const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+    return mm === 60 ? `${hh + 1}h` : (hh ? `${hh}h ${String(mm).padStart(2, '0')}` : `${mm} min`);
+  };
+  const hhmm = ms => new Date(ms).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  const giornoBreve = s => { const d = new Date(s + 'T12:00:00'); return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' }); };
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  let toastTimer;
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  /* ---------------- Stato app ---------------- */
+  let D = null;               // dati dashboard
+  let pendingSet = null, sendTimer = null;
+  let range = '24h';
+  const storicoCache = {};
+  let hol = { t: 10, d: 3, touched: false };
+
+  /* ---------------- Dial ---------------- */
+  const MIN_T = 5, MAX_T = 30, A0 = 135, SWEEP = 270, CX = 130, CY = 126, R = 104;
+  const ang = t => A0 + (Math.min(MAX_T, Math.max(MIN_T, t)) - MIN_T) / (MAX_T - MIN_T) * SWEEP;
+  const pt = (a, r = R) => [CX + r * Math.cos(a * Math.PI / 180), CY + r * Math.sin(a * Math.PI / 180)];
+  function arc(a1, a2, r = R) {
+    const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r);
+    return `M${x1.toFixed(2)} ${y1.toFixed(2)} A${r} ${r} 0 ${a2 - a1 > 180 ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+  }
+  function drawDial(temp, set, heating) {
+    const line = cssVar('--line'), heat = cssVar('--heat'), ink = cssVar('--ink'), card = cssVar('--card');
+    let s = `<path d="${arc(A0, A0 + SWEEP)}" stroke="${line}" stroke-width="14" fill="none" stroke-linecap="round"/>`;
+    if (temp !== null && set !== null) {
+      const a1 = ang(Math.min(temp, set)), a2 = ang(Math.max(temp, set));
+      if (a2 - a1 > 0.5) s += `<path d="${arc(a1, a2)}" stroke="${heating || set > temp ? heat : ink}" stroke-opacity="${heating || set > temp ? 0.9 : 0.25}" stroke-width="14" fill="none" stroke-linecap="round"/>`;
+      // tacche
+      for (let t = 10; t <= 30; t += 5) {
+        const [x1, y1] = pt(ang(t), R - 16), [x2, y2] = pt(ang(t), R - 22);
+        s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${line}" stroke-width="2" stroke-linecap="round"/>`;
+      }
+      const [tx, ty] = pt(ang(temp));
+      s += `<circle cx="${tx}" cy="${ty}" r="4" fill="${ink}"/>`;
+      const [sx, sy] = pt(ang(set));
+      s += `<circle cx="${sx}" cy="${sy}" r="12" fill="${card}" stroke="${heat}" stroke-width="4"/>`;
+    }
+    const [lx, ly] = pt(A0, R + 2), [rx, ry] = pt(A0 + SWEEP, R + 2);
+    s += `<text x="${lx - 4}" y="${ly + 22}" font-size="11" fill="${cssVar('--muted')}" text-anchor="middle">${MIN_T}°</text>`;
+    s += `<text x="${rx + 4}" y="${ry + 22}" font-size="11" fill="${cssVar('--muted')}" text-anchor="middle">${MAX_T}°</text>`;
+    $('dial').innerHTML = s;
+  }
+
+  /* ---------------- Render controllo ---------------- */
+  const MODE_LABEL = { auto: 'Programma', temporary: 'Manuale a tempo', manual: 'Manuale', holiday: 'Vacanza', off: 'Spento' };
+  function rawMode() { return D && !D.stato.acceso ? 'off' : (D ? D.stato.mode : null); }
+  // 'temporary' = manuale con timer: allo scadere il termostato torna al programma
+  function currentMode() { const m = rawMode(); return m === 'temporary' ? 'manual' : m; }
+  let uiTab = null;                         // scheda scelta dall'utente non ancora applicata
+  const tabAttiva = () => uiTab || currentMode();
+  let timer = { on: true, min: 60, touched: false };
+  const dataLunga = ms => new Date(ms).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const fmtDurata = m => `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
+
+  function renderControl() {
+    if (!D) return;
+    const s = D.stato;
+    const set = pendingSet !== null ? pendingSet : s.set;
+    $('deviceName').textContent = 'Casa';
+    $('statusText').innerHTML = `<span class="dot ${s.online ? '' : 'off'}"></span>${s.online ? 'Online' : 'Offline'} · ${hhmm(s.aggiornato)}`;
+    $('tempNow').innerHTML = `${fmt(s.temp)}<sup>°</sup>`;
+    $('tempSet').textContent = s.acceso ? `${fmt(set)}°` : 'spento';
+    $('modeLabel').textContent = (MODE_LABEL[rawMode()] || '') +
+      (attese.some(a => 'mode' in a.attesi || 'acceso' in a.attesi) ? ' · in attesa di conferma…' : '');
+    $('nextChange').textContent = prossimoCambio();
+    const chip = $('boilerChip');
+    chip.classList.toggle('on', !!s.caldaia && s.acceso);
+    const st = s.stimata ? ' (stima)' : '';
+    $('boilerText').textContent = !s.acceso ? 'Termostato spento' : (s.caldaia ? 'Caldaia accesa' + st : 'Caldaia spenta' + st);
+    drawDial(s.temp, s.acceso ? set : null, s.caldaia);
+    $('minusBtn').disabled = !s.acceso || set <= MIN_T;
+    $('plusBtn').disabled = !s.acceso || set >= MAX_T;
+    $('factExt').innerHTML = s.tEsterna === null || s.tEsterna === undefined ? '--' : `${fmt(s.tEsterna)}<small>°</small>`;
+    $('factHours').textContent = fmtOre(D.oggi.ore);
+    $('factCount').textContent = D.oggi.accensioni;
+    document.querySelectorAll('#modeSeg button').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === tabAttiva());
+      b.classList.toggle('off', b.dataset.mode === 'off');
+    });
+    $('lockToggle').classList.toggle('on', !!s.childLock);
+    ['auto', 'manual', 'holiday'].forEach(m => {
+      $({ auto: 'progCard', manual: 'manualCard', holiday: 'holidayCard' }[m]).classList.toggle('show', tabAttiva() === m);
+    });
+    renderManual();
+    renderHoliday();
+  }
+
+  function renderManual() {
+    const s = D.stato, attivo = currentMode() === 'manual';
+    if (!timer.touched) timer.min = 60;                  // predefinito: 60 minuti
+    if (!attivo) $('manualStatus').textContent = 'Non attivo';
+    else if (rawMode() === 'temporary' && s.countdownMin) {
+      const fine = Date.now() + s.countdownMin * 60000;
+      $('manualStatus').innerHTML = `<b>Attivo</b> · fino alle ${hhmm(fine)}`;
+    } else $('manualStatus').innerHTML = '<b>Attivo</b> · senza limite';
+    $('timerToggle').classList.toggle('on', timer.on);
+    $('timerBox').classList.toggle('disabled', !timer.on);
+    $('timerDur').textContent = fmtDurata(timer.min);
+    $('timerEnd').textContent = timer.on ? `fino alle ${hhmm(Date.now() + timer.min * 60000)}` : '';
+    $('timerMinus').disabled = timer.min <= 30;
+    $('timerPlus').disabled = timer.min >= 480;
+    $('manualGo').textContent = attivo ? 'Aggiorna' : 'Attiva manuale';
+  }
+
+  function renderHoliday() {
+    const s = D.stato, attivo = currentMode() === 'holiday';
+    if (!hol.touched) hol = { t: s.holidayTemp || 10, d: Math.max(1, s.holidayDays || 1), touched: false };
+    // fine: se la vacanza è attiva e conosciamo l'inizio, inizio + giorni; altrimenti da oggi
+    const inizio = attivo && s.vacanzaInizio && !hol.touched ? s.vacanzaInizio : Date.now();
+    const fine = inizio + hol.d * 86400000;
+    $('hEnd').textContent = dataLunga(fine);
+    $('hTemp').textContent = `${fmt(hol.t)}°`;
+    $('hDays').textContent = hol.d === 1 ? '1 giorno' : `${hol.d} giorni`;
+    const iso = new Date(fine - new Date(fine).getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    if (document.activeElement !== $('hDate')) $('hDate').value = iso;
+    $('hDate').min = new Date(Date.now() + 86400000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    $('holidayStatus').innerHTML = attivo ? '<b>Attiva</b>' : 'Non attiva';
+    $('holidayGo').textContent = attivo ? 'Aggiorna vacanza' : 'Attiva vacanza';
+  }
+
+  /* ---------------- Comandi ---------------- */
+  /* Dopo un comando lo stato riletto dal cloud può essere ancora quello vecchio per qualche secondo.
+     Ogni comando registra il risultato atteso: finché il termostato non lo conferma l'interfaccia
+     mostra il valore atteso ("in attesa di conferma"); a metà tempo il comando viene rimandato
+     una volta; se dopo 60 s non c'è conferma compare un avviso. */
+  const ATTESA_MS = STATO.real ? 60000 : 3000;
+  let attese = [];
+
+  function confermato(campo, atteso) {
+    const v = D.stato[campo];
+    if (campo === 'set') return v !== null && Math.abs(v - atteso) < 0.05;
+    return v === atteso;
+  }
+
+  function verificaAttese() {
+    if (!D || !attese.length) return;
+    const now = Date.now();
+    attese = attese.filter(a => {
+      const ok = Object.keys(a.attesi).every(c => confermato(c, a.attesi[c]));
+      if (ok) return false;                                       // confermato dal termostato
+      if (now > a.scade) {
+        toast('Il termostato non ha confermato il comando: riprova');
+        return false;
+      }
+      if (!a.rimandato && now - a.inizio > ATTESA_MS / 2) {       // rimanda una volta
+        a.rimandato = true;
+        call('apiComandi', a.lista).catch(() => { });
+      }
+      Object.assign(D.stato, a.attesi);                           // mostra il valore atteso
+      return true;
+    });
+  }
+
+  function pianificaControlli() {
+    (STATO.real ? [5000, 12000, 22000, 35000, 50000, 62000] : [500, 1500, 3200]).forEach(ms => setTimeout(() => load(false), ms));
+  }
+
+  async function send(lista, okMsg, attesi) {
+    try {
+      await call('apiComandi', lista);
+      toast(okMsg || 'Comando inviato');
+      if (attesi) {
+        // un nuovo comando sugli stessi campi sostituisce l'attesa precedente;
+        // un cambio di modalità o accensione annulla anche le attese sulla temperatura
+        // (tornando al programma il termostato riprende la temperatura della fascia)
+        const cambiaModo = 'mode' in attesi || 'acceso' in attesi;
+        attese = attese.filter(a => !Object.keys(a.attesi).some(c => c in attesi || (cambiaModo && c === 'set')));
+        attese.push({ lista, attesi, inizio: Date.now(), scade: Date.now() + ATTESA_MS, rimandato: false });
+      }
+      pianificaControlli();
+      return true;
+    } catch (e) {
+      toast('Errore: ' + (e.message || e));
+      return false;
+    }
+  }
+
+  function annullaTemperaturaInCoda() {
+    if (sendTimer) { clearTimeout(sendTimer); sendTimer = null; }
+    if (pendingSet !== null) { pendingSet = null; $('sendState').innerHTML = '&nbsp;'; }
+  }
+
+  function bumpSet(delta) {
+    if (!D) return;
+    const base = pendingSet !== null ? pendingSet : D.stato.set;
+    pendingSet = Math.min(MAX_T, Math.max(MIN_T, Math.round((base + delta) * 2) / 2));
+    $('sendState').textContent = 'In attesa…';
+    renderControl();
+    clearTimeout(sendTimer);
+    sendTimer = setTimeout(async () => {
+      const v = pendingSet;
+      $('sendState').textContent = 'Invio…';
+      const ok = await send([{ code: 'temp_set', value: v }], `Obiettivo impostato a ${fmt(v)}°`, { set: v });
+      if (ok) { D.stato.set = v; }
+      pendingSet = null;
+      $('sendState').innerHTML = ok ? 'Inviato' : '&nbsp;';
+      setTimeout(() => { $('sendState').innerHTML = '&nbsp;'; }, 2000);
+      renderControl();
+    }, 1100);
+  }
+  $('minusBtn').onclick = () => bumpSet(-0.5);
+  $('plusBtn').onclick = () => bumpSet(+0.5);
+
+  $('modeSeg').onclick = async e => {
+    const b = e.target.closest('button'); if (!b || !D) return;
+    const m = b.dataset.mode;
+    // Manuale e Vacanza aprono la loro scheda: si attivano con il pulsante dentro la scheda
+    if (m === 'manual' || m === 'holiday') {
+      uiTab = m === currentMode() ? null : m;
+      renderControl(); return;
+    }
+    uiTab = null;
+    annullaTemperaturaInCoda();
+    if (m === currentMode()) { renderControl(); return; }
+    let lista;
+    if (m === 'off') lista = [{ code: 'switch', value: false }];
+    else lista = D.stato.acceso ? [{ code: 'mode', value: m }] : [{ code: 'switch', value: true }, { code: 'mode', value: m }];
+    const prev = { acceso: D.stato.acceso, mode: D.stato.mode };
+    if (m === 'off') D.stato.acceso = false; else { D.stato.acceso = true; D.stato.mode = m; }
+    renderControl();
+    const ok = await send(lista, m === 'off' ? 'Termostato spento' : `Modalità: ${MODE_LABEL[m]}`,
+      m === 'off' ? { acceso: false } : { acceso: true, mode: m });
+    if (!ok) { Object.assign(D.stato, prev); renderControl(); }
+  };
+
+  // Manuale
+  $('timerToggle').onclick = () => { timer.on = !timer.on; timer.touched = true; renderManual(); };
+  $('timerMinus').onclick = () => { timer.min = Math.max(30, timer.min - 30); timer.touched = true; renderManual(); };
+  $('timerPlus').onclick = () => { timer.min = Math.min(480, timer.min + 30); timer.touched = true; renderManual(); };
+  $('manualGo').onclick = async () => {
+    const lista = [];
+    // la temperatura scelta con − / + resta valida: viene inviata insieme alla modalità
+    if (pendingSet !== null) { lista.push({ code: 'temp_set', value: pendingSet }); D.stato.set = pendingSet; }
+    annullaTemperaturaInCoda();
+    if (!D.stato.acceso) lista.push({ code: 'switch', value: true });
+    if (timer.on) lista.push({ code: 'temporary_time', value: timer.min }, { code: 'mode', value: 'temporary' });
+    else lista.push({ code: 'mode', value: 'manual' });
+    const ok = await send(lista, timer.on ? `Manuale fino alle ${hhmm(Date.now() + timer.min * 60000)}` : 'Manuale senza limite',
+      { acceso: true, mode: timer.on ? 'temporary' : 'manual' });
+    if (ok) {
+      Object.assign(D.stato, { acceso: true, mode: timer.on ? 'temporary' : 'manual', countdownMin: timer.on ? timer.min : null });
+      uiTab = null; timer.touched = false; renderControl();
+    }
+  };
+  setInterval(() => { if (D && tabAttiva() === 'manual') renderManual(); }, 30000);
+
+  // Vacanza
+  $('holidayCard').addEventListener('click', e => {
+    const b = e.target.closest('button[data-h]'); if (!b) return;
+    hol.touched = true;
+    const k = b.dataset.h;
+    if (k === 't-') hol.t = Math.max(5, Math.round((hol.t - 0.5) * 2) / 2);
+    if (k === 't+') hol.t = Math.min(25, Math.round((hol.t + 0.5) * 2) / 2);
+    if (k === 'd-') hol.d = Math.max(1, hol.d - 1);
+    if (k === 'd+') hol.d = Math.min(365, hol.d + 1);
+    renderHoliday();
+  });
+  $('hDate').onchange = () => {
+    const v = $('hDate').value; if (!v) return;
+    const fine = new Date(v + 'T00:00:00'), oggi = new Date(); oggi.setHours(0, 0, 0, 0);
+    hol.d = Math.min(365, Math.max(1, Math.round((fine - oggi) / 86400000)));
+    hol.touched = true; renderHoliday();
+  };
+  $('holidayGo').onclick = async () => {
+    annullaTemperaturaInCoda();
+    const lista = [];
+    if (!D.stato.acceso) lista.push({ code: 'switch', value: true });
+    lista.push({ code: 'holiday_temp_set', value: hol.t }, { code: 'holiday_days_set', value: hol.d }, { code: 'mode', value: 'holiday' });
+    const fine = dataLunga(Date.now() + hol.d * 86400000);
+    const ok = await send(lista, `Vacanza attiva fino a ${fine}`, { acceso: true, mode: 'holiday' });
+    if (ok) {
+      Object.assign(D.stato, { acceso: true, mode: 'holiday', holidayTemp: hol.t, holidayDays: hol.d, vacanzaInizio: Date.now() });
+      hol.touched = false; uiTab = null; renderControl();
+    }
+  };
+
+  $('lockToggle').onclick = async () => {
+    if (!D) return;
+    const v = !D.stato.childLock;
+    D.stato.childLock = v; renderControl();
+    const ok = await send([{ code: 'child_lock', value: v }], v ? 'Tasti bloccati' : 'Tasti sbloccati', { childLock: v });
+    if (!ok) { D.stato.childLock = !v; renderControl(); }
+  };
+
+  /* ---------------- Programma settimanale ---------------- */
+  const GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+  const MIN_FASCE = 2, MAX_FASCE = 6;
+  const clone = x => x ? JSON.parse(JSON.stringify(x)) : null;
+  const oggiIdx = () => (new Date().getDay() + 6) % 7;
+  const min = f => f.h * 60 + f.m;
+  const hm = f => `${String(f.h).padStart(2, '0')}:${String(f.m).padStart(2, '0')}`;
+  let prog = null, progDirty = false, selDay = oggiIdx(), copySel = new Set();
+  const ICONA_CESTINO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+
+  // Scala colori per fasce di temperatura
+  const SCALA = [
+    { da: 20, colore: '#D93A2F', testo: '#fff', nome: '≥ 20°' },
+    { da: 19, colore: '#EE8A2A', testo: '#fff', nome: '19–20°' },
+    { da: 18, colore: '#F2C230', testo: '#3A2E00', nome: '18–19°' },
+    { da: 17, colore: '#4DB26A', testo: '#fff', nome: '17–18°' },
+    { da: 16, colore: '#5BC0E8', testo: '#08303F', nome: '16–17°' },
+    { da: -99, colore: '#2F5FC4', testo: '#fff', nome: '< 16°' },
+  ];
+  const fascia = t => SCALA.find(x => t >= x.da - 1e-9);
+  const tempColor = t => fascia(t).colore;
+
+  function ultimaDelGiornoPrima(d) {
+    for (let k = 1; k <= 7; k++) {
+      const f = prog[(d - k + 7) % 7];
+      if (f && f.length) return f[f.length - 1].t;
+    }
+    return null;
+  }
+
+  function prossimoCambio() {
+    if (!D || !D.stato.acceso || !D.stato.programma || currentMode() !== 'auto') return '';
+    const P = D.stato.programma, now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
+    for (let k = 0; k < 7; k++) {
+      const d = (oggiIdx() + k) % 7;
+      const f = (P[d] || []).find(x => k > 0 || min(x) > nowMin);
+      if (f) return `Alle ${hm(f)}${k === 1 ? ' di domani' : k > 1 ? ' di ' + GIORNI[d].toLowerCase() : ''} → ${fmt(f.t)}°`;
+    }
+    return '';
+  }
+
+  function renderProg() {
+    const card = $('progCard');
+    if (!prog) { card.querySelector('#slots').innerHTML = '<div class="empty">Programma non disponibile.</div>'; return; }
+    $('progStatus').innerHTML = progDirty ? '<span class="dirty-note">Modifiche non salvate</span>' : (currentMode() === 'auto' ? 'Attivo' : 'Non attivo');
+    $('days').innerHTML = GIORNI.map((g, i) => `<button data-d="${i}" class="${i === selDay ? 'sel' : ''} ${i === oggiIdx() ? 'today' : ''}">${g}</button>`).join('');
+
+    // timeline
+    const f = prog[selDay];
+    const segs = [];
+    let t0 = 0, tPrev = ultimaDelGiornoPrima(selDay);
+    f.forEach(x => { if (min(x) > t0) segs.push([t0, min(x), tPrev]); t0 = min(x); tPrev = x.t; });
+    segs.push([t0, 1440, tPrev]);
+    let tl = segs.filter(s => s[1] > s[0]).map(s => {
+      const w = (s[1] - s[0]) / 1440 * 100;
+      const fx = s[2] === null ? null : fascia(s[2]);
+      return `<div style="left:${s[0] / 1440 * 100}%;width:${w}%;background:${fx ? fx.colore : 'var(--line)'};color:${fx ? fx.testo : 'inherit'}">${w > 9 && fx ? fmt(s[2]) + '°' : ''}</div>`;
+    }).join('');
+    if (selDay === oggiIdx()) { const n = new Date(); tl += `<div class="now" style="left:${(n.getHours() * 60 + n.getMinutes()) / 1440 * 100}%"></div>`; }
+    $('timeline').innerHTML = tl;
+
+    // fasce
+    const dup = new Set();
+    f.forEach((x, i) => { if (f.some((y, j) => j !== i && min(y) === min(x))) dup.add(i); });
+    // fine fascia = inizio della successiva; l'ultima finisce alla prima fascia del giorno dopo
+    const fineDi = i => {
+      if (i < f.length - 1) return { testo: hm(f[i + 1]), giorno: '' };
+      for (let k = 1; k <= 7; k++) {
+        const g = prog[(selDay + k) % 7];
+        if (g && g.length) return { testo: hm(g[0]), giorno: k === 1 ? 'domani' : GIORNI[(selDay + k) % 7].toLowerCase() };
+      }
+      return { testo: '24:00', giorno: '' };
+    };
+    // fascia ereditata dalla notte: dall'ultima fascia del giorno prima fino alla prima di oggi (sola lettura)
+    let rigaIeri = '';
+    if (f.length && min(f[0]) > 0) {
+      let prev = null, kPrev = 0;
+      for (let k = 1; k <= 7; k++) { const g = prog[(selDay - k + 7) % 7]; if (g && g.length) { prev = g[g.length - 1]; kPrev = k; break; } }
+      if (prev) {
+        const fx = fascia(prev.t), dPrev = (selDay - kPrev + 7) % 7;
+        rigaIeri = `
+      <div class="slot readonly" data-goto="${dPrev}" title="Tocca per modificarla in ${GIORNI[dPrev]}">
+        <span class="sw" style="background:${fx.colore}"></span>
+        <div class="range">
+          <span class="start-ro">${hm(prev)}<small>${kPrev === 1 ? 'ieri' : GIORNI[dPrev].toLowerCase()}</small></span>
+          <span class="dash">–</span>
+          <span class="end">${hm(f[0])}</span>
+        </div>
+        <div class="mini-step ro"><span class="tval" style="background:${fx.colore};color:${fx.testo}">${fmt(prev.t)}°</span><span class="ro-go" aria-hidden="true">›</span></div>
+      </div>`;
+      }
+    }
+    $('slots').innerHTML = rigaIeri + f.map((x, i) => {
+      const fine = fineDi(i), fx = fascia(x.t);
+      return `
+      <div class="slot-wrap" data-i="${i}">
+        <div class="slot-bg"><span class="trash l">${ICONA_CESTINO}</span><span class="trash r">${ICONA_CESTINO}</span></div>
+        <div class="slot" data-i="${i}">
+          <span class="sw" style="background:${fx.colore}"></span>
+          <div class="range">
+            <label class="tbtn ${dup.has(i) ? 'err' : ''}"><span>${hm(x)}</span><input type="time" step="300" value="${hm(x)}" data-i="${i}" aria-label="Inizio fascia ${i + 1}"></label>
+            <span class="dash">–</span>
+            <span class="end">${fine.testo}${fine.giorno ? `<small>${fine.giorno}</small>` : ''}</span>
+          </div>
+          <div class="mini-step"><button data-p="-" data-i="${i}">−</button><span class="tval" style="background:${fx.colore};color:${fx.testo}">${fmt(x.t)}°</span><button data-p="+" data-i="${i}">+</button></div>
+        </div>
+      </div>`;
+    }).join('');
+    $('progLegend').innerHTML = SCALA.map(x => `<span><i style="background:${x.colore}"></i>${x.nome}</span>`).join('');
+    $('addSlot').disabled = f.length >= MAX_FASCE;
+    const invalido = prog.some(g => g.length < MIN_FASCE || new Set(g.map(min)).size !== g.length);
+    $('progSave').disabled = !progDirty || invalido;
+    $('progReset').disabled = !progDirty;
+
+    $('copyFrom').textContent = GIORNI[selDay];
+    $('copyDays').innerHTML = GIORNI.map((g, i) => `<button data-c="${i}" class="${copySel.has(i) ? 'pick' : ''}" ${i === selDay ? 'disabled style="opacity:.35"' : ''}>${g}</button>`).join('');
+  }
+
+  function modifica(fn) { fn(prog[selDay]); progDirty = true; renderProg(); }
+  function ordina() { prog[selDay].sort((a, b) => min(a) - min(b)); }
+
+  $('days').onclick = e => { const b = e.target.closest('button[data-d]'); if (!b) return; selDay = +b.dataset.d; copySel.clear(); renderProg(); };
+
+  $('slots').addEventListener('change', e => {
+    const inp = e.target.closest('input[type=time]'); if (!inp || !inp.value) return;
+    inp.previousElementSibling.textContent = inp.value;
+    const [h, m] = inp.value.split(':').map(Number);
+    modifica(f => { f[+inp.dataset.i].h = h; f[+inp.dataset.i].m = m; ordina(); });
+  });
+
+  // +/− temperatura con pressione prolungata
+  let holdT, holdI;
+  function stepTemp(i, dir) { modifica(f => { f[i].t = Math.min(35, Math.max(5, Math.round((f[i].t + dir * 0.1) * 10) / 10)); }); }
+  $('slots').addEventListener('pointerdown', e => {
+    const b = e.target.closest('button[data-p]'); if (!b) return;
+    const i = +b.dataset.i, dir = b.dataset.p === '+' ? 1 : -1;
+    stepTemp(i, dir);
+    holdT = setTimeout(() => { holdI = setInterval(() => stepTemp(i, dir), 90); }, 400);
+  });
+  const stopHold = () => { clearTimeout(holdT); clearInterval(holdI); };
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => document.addEventListener(ev, stopHold));
+
+  $('slots').addEventListener('click', e => {
+    const go = e.target.closest('[data-goto]');
+    if (go) { selDay = +go.dataset.goto; copySel.clear(); renderProg(); return; }
+    // su computer il clic sul pulsante orario apre il selettore
+    const tb = e.target.closest('.tbtn');
+    if (tb) { const inp = tb.querySelector('input'); try { inp.showPicker && inp.showPicker(); } catch (err) { inp.focus(); } }
+  });
+
+  /* Trascina di lato per eliminare: oltre metà larghezza → cestino */
+  let drag = null;
+  $('slots').addEventListener('pointerdown', e => {
+    if (e.target.closest('button, input, .tbtn')) return;
+    const row = e.target.closest('.slot-wrap'); if (!row) return;
+    drag = { row, slot: row.querySelector('.slot'), bg: row.querySelector('.slot-bg'), x0: e.clientX, y0: e.clientY, dx: 0, attivo: false, id: e.pointerId };
+  });
+  $('slots').addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if (!drag.attivo) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { drag = null; return; }   // scorrimento verticale
+      if (Math.abs(dx) < 8) return;
+      drag.attivo = true;
+      try { drag.slot.setPointerCapture(e.pointerId); } catch (err) { }
+    }
+    drag.dx = dx;
+    const w = drag.row.clientWidth, p = Math.min(1, Math.abs(dx) / (w / 2));
+    drag.slot.style.transform = `translateX(${dx}px)`;
+    drag.bg.style.opacity = (0.25 + 0.75 * p).toFixed(2);
+    drag.bg.style.justifyContent = dx > 0 ? 'flex-start' : 'flex-end';
+    drag.bg.querySelector('.l').style.display = dx > 0 ? '' : 'none';
+    drag.bg.querySelector('.r').style.display = dx > 0 ? 'none' : '';
+    drag.row.classList.toggle('oltre', p >= 1);
+  });
+  const fineDrag = () => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    if (!d.attivo) return;
+    const w = d.row.clientWidth, i = +d.row.dataset.i;
+    const elimina = Math.abs(d.dx) >= w / 2;
+    if (elimina && prog[selDay].length <= MIN_FASCE) {
+      toast(`Servono almeno ${MIN_FASCE} fasce al giorno`);
+    }
+    if (elimina && prog[selDay].length > MIN_FASCE) {
+      d.slot.classList.add('anima');
+      d.slot.style.transform = `translateX(${d.dx > 0 ? w : -w}px)`;
+      d.row.style.height = d.row.offsetHeight + 'px';
+      setTimeout(() => { d.row.classList.add('via'); d.row.style.height = '0px'; d.row.style.opacity = '0'; }, 160);
+      setTimeout(() => modifica(f => { f.splice(i, 1); }), 380);
+      return;
+    }
+    d.slot.classList.add('anima');
+    d.slot.style.transform = '';
+    d.bg.style.opacity = '0';
+    d.row.classList.remove('oltre');
+    setTimeout(() => d.slot.classList.remove('anima'), 250);
+  };
+  $('slots').addEventListener('pointerup', fineDrag);
+  $('slots').addEventListener('pointercancel', fineDrag);
+
+  $('addSlot').onclick = () => modifica(f => {
+    if (f.length >= MAX_FASCE) return;
+    // nuova fascia a metà del tratto più lungo libero, temperatura 18°
+    let best = { gap: -1, at: 720 };
+    const pts = [0, ...f.map(min), 1440];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const gap = pts[i + 1] - pts[i];
+      if (gap > best.gap) best = { gap, at: pts[i] + Math.floor(gap / 2 / 5) * 5 };
+    }
+    let at = Math.min(1435, best.at);
+    while (f.some(x => min(x) === at)) at += 5;
+    f.push({ h: Math.floor(at / 60), m: at % 60, t: 18 });
+    f.sort((a, b) => min(a) - min(b));
+  });
+
+  $('copyBtn').onclick = () => { const p = $('copyPanel'); p.classList.toggle('show'); copySel.clear(); renderProg(); };
+  $('copyDays').onclick = e => { const b = e.target.closest('button[data-c]'); if (!b) return; const i = +b.dataset.c; copySel.has(i) ? copySel.delete(i) : copySel.add(i); renderProg(); };
+  $('copyPanel').querySelector('.quick').onclick = e => {
+    const q = e.target.dataset.q; if (!q) return;
+    copySel = new Set(q === 'feriali' ? [0, 1, 2, 3, 4] : q === 'weekend' ? [5, 6] : q === 'tutti' ? [0, 1, 2, 3, 4, 5, 6] : []);
+    copySel.delete(selDay); renderProg();
+  };
+  $('copyGo').onclick = () => {
+    if (!copySel.size) { toast('Scegli almeno un giorno'); return; }
+    copySel.forEach(d => { prog[d] = clone(prog[selDay]); });
+    toast(`Copiato su ${[...copySel].sort().map(d => GIORNI[d]).join(', ')}`);
+    copySel.clear(); progDirty = true; $('copyPanel').classList.remove('show'); renderProg();
+  };
+
+  $('progReset').onclick = () => { prog = clone(D.stato.programma); progDirty = false; renderProg(); };
+  $('progSave').onclick = async () => {
+    const btn = $('progSave'); btn.disabled = true; btn.textContent = 'Invio…';
+    try {
+      const r = await call('apiSalvaProgramma', prog);
+      D.stato.programma = clone(r.programma || prog);
+      prog = clone(D.stato.programma); progDirty = false;
+      toast('Programma salvato sul termostato');
+      setTimeout(() => load(false), STATO.real ? 8000 : 400);
+    } catch (e) {
+      toast('Errore: ' + (e.message || e));
+    } finally {
+      btn.textContent = 'Salva sul termostato'; renderProg();
+    }
+  };
+  window.addEventListener('beforeunload', e => { if (progDirty) { e.preventDefault(); e.returnValue = ''; } });
+
+  /* ---------------- Grafici ---------------- */
+  let W = 640, Hc = 260;
+  const PAD = { l: 34, r: 34, t: 12, b: 26 };
+  function misura() {
+    W = Math.max(300, Math.round($('chart').clientWidth || 640));
+    Hc = W < 500 ? 220 : 260;
+  }
+
+  const effColore = v => v === null || v === undefined ? cssVar('--muted') : v >= 65 ? '#3FA55E' : v >= 50 ? '#EE8A2A' : '#D93A2F';
+  const effGiudizio = v => v === null || v === undefined ? '' : v >= 85 ? 'migliore del solito' : v >= 65 ? 'nella norma' : v >= 50 ? 'un po\' sotto la media' : 'bassa: possibili dispersioni';
+  function kpiEff(titolo, v, provvisorio) {
+    const val = v === null || v === undefined ? '--' : `<span class="eff-dot" style="background:${effColore(v)}"></span>${v}`;
+    return kpi(titolo, val, v === null || v === undefined ? '' : (provvisorio ? '/100 · provv.' : '/100'));
+  }
+  function kpi(k, v, sub) {
+    return `<div class="fact"><div class="k">${k}</div><div class="v">${v}${sub ? ` <small>${sub}</small>` : ''}</div></div>`;
+  }
+
+  function chart24h() {
+    misura();
+    const s = D.serie, now = D.stato.aggiornato, t0 = now - 24 * 3600e3;
+    const all = [...s.temp, ...s.set, ...s.est].map(p => p[1]).filter(v => v !== null);
+    if (!s.temp.length) { $('chart').innerHTML = '<div class="empty">Nessun dato nelle ultime 24 ore.</div>'; $('legend').innerHTML = ''; return; }
+    let lo = Math.floor(Math.min(...all) - 1), hi = Math.ceil(Math.max(...all) + 1);
+    const x = t => PAD.l + (t - t0) / (now - t0) * (W - PAD.l - PAD.r);
+    const y = v => PAD.t + (hi - v) / (hi - lo) * (Hc - PAD.t - PAD.b);
+    const heat = cssVar('--heat'), cool = cssVar('--cool'), ink = cssVar('--ink'), muted = cssVar('--muted'), line = cssVar('--line'), heatSoft = cssVar('--heat-soft');
+    let g = '';
+    D.accensioni.forEach(a => {
+      const x1 = x(Math.max(a[0], t0)), x2 = x(Math.min(a[1], now));
+      g += `<rect x="${x1}" y="${PAD.t}" width="${Math.max(1.5, x2 - x1)}" height="${Hc - PAD.t - PAD.b}" fill="${heatSoft}"/>`;
+    });
+    const step = Math.max(1, Math.round((hi - lo) / 5));
+    for (let v = Math.ceil(lo); v <= hi; v += step) {
+      g += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(v)}" y2="${y(v)}" stroke="${line}" stroke-width="1"/>`;
+      g += `<text x="${PAD.l - 8}" y="${y(v) + 4}" font-size="11" fill="${muted}" text-anchor="end">${v}°</text>`;
+    }
+    const start = new Date(t0); start.setMinutes(0, 0, 0);
+    for (let t = start.getTime() + 3600e3; t <= now; t += 3600e3) {
+      const h = new Date(t).getHours();
+      if (h % 4 === 0) g += `<text x="${x(t)}" y="${Hc - 6}" font-size="11" fill="${muted}" text-anchor="middle">${String(h).padStart(2, '0')}:00</text>`;
+    }
+    const path = (pts, stepped) => pts.filter(p => p[0] >= t0).map((p, i, arr) => {
+      if (i === 0) return `M${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`;
+      return stepped ? `H${x(p[0]).toFixed(1)} V${y(p[1]).toFixed(1)}` : `L${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`;
+    }).join(' ');
+    const ext = (pts) => pts.length ? pts.concat([[now, pts[pts.length - 1][1]]]) : pts;
+    g += `<path d="${path(ext(s.set), true)}" fill="none" stroke="${muted}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    g += `<path d="${path(s.est)}" fill="none" stroke="${cool}" stroke-width="2"/>`;
+    g += `<path d="${path(ext(s.temp), true)}" fill="none" stroke="${ink}" stroke-width="2.2" stroke-linejoin="round"/>`;
+    g += `<line id="cross" x1="0" x2="0" y1="${PAD.t}" y2="${Hc - PAD.b}" stroke="${muted}" stroke-width="1" opacity="0"/>`;
+    $('chart').innerHTML = `<svg viewBox="0 0 ${W} ${Hc}" id="svg24">${g}</svg><div class="tip" id="tip"></div>`;
+    $('legend').innerHTML = `<span><i style="background:${ink}"></i>Interna</span><span><i style="background:${muted}"></i>Obiettivo</span><span><i style="background:${cool}"></i>Esterna</span><span><i style="background:${heat};opacity:.5;height:10px"></i>Caldaia accesa${D.stato.stimata ? ' (stima)' : ''}</span>`;
+
+    const valAt = (pts, t) => { let v = null; for (const p of pts) { if (p[0] <= t) v = p[1]; else break; } return v; };
+    const svg = $('svg24');
+    const move = ev => {
+      const r = svg.getBoundingClientRect();
+      const px = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
+      const vx = px / r.width * W;
+      if (vx < PAD.l || vx > W - PAD.r) return;
+      const t = t0 + (vx - PAD.l) / (W - PAD.l - PAD.r) * (now - t0);
+      const on = D.accensioni.some(a => t >= a[0] && t <= a[1]);
+      const c = $('cross'); c.setAttribute('x1', vx); c.setAttribute('x2', vx); c.setAttribute('opacity', 1);
+      const tip = $('tip');
+      tip.innerHTML = `<b>${hhmm(t)}</b><br>Interna ${fmt(valAt(s.temp, t))}° · Obiettivo ${fmt(valAt(s.set, t))}°<br>Esterna ${fmt(valAt(s.est, t))}°${on ? ' · <b>caldaia accesa</b>' : ''}`;
+      tip.style.left = Math.min(r.width - 90, Math.max(90, px)) + 'px'; tip.style.top = '30px'; tip.style.opacity = 1;
+    };
+    const leave = () => { $('tip').style.opacity = 0; $('cross').setAttribute('opacity', 0); };
+    svg.addEventListener('pointermove', move); svg.addEventListener('pointerleave', leave);
+    svg.addEventListener('touchmove', move, { passive: true }); svg.addEventListener('touchend', leave);
+
+    const ore24 = D.accensioni.reduce((a, p) => a + (p[1] - p[0]), 0) / 3600e3;
+    const E = D.efficienza || {};
+    $('kpis').innerHTML = kpi('Accesa 24h', fmtOre(ore24)) + kpi('Accensioni', D.accensioni.length) +
+      kpiEff('Efficienza', E.indice, E.provvisorio) + kpi('Esterna ora', fmt(D.stato.tEsterna) + '°');
+    const v = E.indice;
+    $('effBox').innerHTML = `
+      <div class="eff-wrap">
+        <div class="eff-head"><b>Efficienza ultime 24 ore</b><span class="small" style="color:${effColore(v)};font-weight:700">${v === null || v === undefined ? (E.motivo || 'non disponibile') : effGiudizio(v)}</span></div>
+        <div class="gauge">${v === null || v === undefined ? '' : `<span class="mk" style="left:${v}%"></span>`}<span class="avg" style="left:75%" title="la tua media"></span></div>
+        <div class="eff-scale"><span>0</span><span>50</span><span>65</span><span>media 75</span><span>100</span></div>
+        <div class="small muted" style="margin-top:10px">Interna media ${fmt(E.tInt)}° · esterna media ${fmt(E.tEst)}° · caldaia accesa ${fmtOre(ore24)}${E.provvisorio ? `<br>Riferimento provvisorio: la tua media sarà calcolata dopo 5 giorni di dati validi (ora ${E.giorniRif || 0}).` : ''}</div>
+      </div>`;
+  }
+
+  function chartGiorni(dati) {
+    misura();
+    const rows = Array.isArray(dati) ? dati : (dati.giorni || []);
+    const rif = Array.isArray(dati) ? null : dati.riferimento;
+    const heat = cssVar('--heat'), cool = cssVar('--cool'), muted = cssVar('--muted'), line = cssVar('--line');
+    if (!rows.length) {
+      $('chart').innerHTML = '<div class="empty">Ancora nessun giorno registrato.<br>Il riepilogo si riempie con l\'aggiornamento automatico.</div>';
+      $('legend').innerHTML = ''; $('kpis').innerHTML = ''; $('effBox').innerHTML = ''; return;
+    }
+    const maxOre = Math.max(2, Math.ceil(Math.max(...rows.map(r => r.ore || 0)) + 0.5));
+    const temps = rows.map(r => r.tEst).filter(v => v !== null);
+    const tLo = temps.length ? Math.floor(Math.min(...temps) - 2) : 0, tHi = temps.length ? Math.ceil(Math.max(...temps) + 2) : 20;
+    const n = rows.length, bw = (W - PAD.l - PAD.r) / n;
+    const yO = v => PAD.t + (1 - v / maxOre) * (Hc - PAD.t - PAD.b);
+    const yT = v => PAD.t + (tHi - v) / (tHi - tLo) * (Hc - PAD.t - PAD.b);
+    let g = '';
+    const stepO = maxOre <= 6 ? 1 : Math.ceil(maxOre / 5);
+    for (let v = 0; v <= maxOre; v += stepO) {
+      g += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${yO(v)}" y2="${yO(v)}" stroke="${line}"/>`;
+      g += `<text x="${PAD.l - 8}" y="${yO(v) + 4}" font-size="11" fill="${muted}" text-anchor="end">${v}h</text>`;
+    }
+    const stepT = Math.max(1, Math.round((tHi - tLo) / 5));
+    for (let v = tLo; v <= tHi; v += stepT) g += `<text x="${W - PAD.r + 8}" y="${yT(v) + 4}" font-size="11" fill="${cool}">${v}°</text>`;
+    rows.forEach((r, i) => {
+      const x0 = PAD.l + i * bw, w = Math.max(2, bw * 0.62);
+      if (r.ore !== null) g += `<rect data-i="${i}" x="${x0 + (bw - w) / 2}" y="${yO(r.ore)}" width="${w}" height="${Math.max(0, yO(0) - yO(r.ore))}" rx="${Math.min(5, w / 3)}" fill="${heat}" opacity="${r.copertura !== null && r.copertura < 20 ? .45 : .9}"/>`;
+      const every = n <= 8 ? 1 : n <= 16 ? 2 : 5;
+      if (i % every === 0 || i === n - 1) g += `<text x="${x0 + bw / 2}" y="${Hc - 6}" font-size="11" fill="${muted}" text-anchor="middle">${n <= 8 ? (W < 520 ? new Date(r.data + 'T12:00:00').toLocaleDateString('it-IT', { weekday: 'short' }) : giornoBreve(r.data)) : Number(r.data.slice(8))}</text>`;
+    });
+    const pts = rows.map((r, i) => r.tEst === null ? null : [PAD.l + i * bw + bw / 2, yT(r.tEst)]).filter(Boolean);
+    if (pts.length) {
+      g += `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="${cool}" stroke-width="2"/>`;
+      pts.forEach(p => { g += `<circle cx="${p[0]}" cy="${p[1]}" r="${n <= 8 ? 3.5 : 2}" fill="${cool}"/>`; });
+    }
+    $('chart').innerHTML = `<svg viewBox="0 0 ${W} ${Hc}" id="svgG">${g}</svg><div class="tip" id="tip"></div>`;
+    $('legend').innerHTML = `<span><i style="background:${heat};height:10px"></i>Ore di accensione (stima)</span><span><i style="background:${cool}"></i>Temperatura esterna media</span>`;
+
+    const svg = $('svgG');
+    const move = ev => {
+      const r = svg.getBoundingClientRect();
+      const px = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
+      const i = Math.floor((px / r.width * W - PAD.l) / bw);
+      if (i < 0 || i >= n) return;
+      const d = rows[i], tip = $('tip');
+      tip.innerHTML = `<b>${giornoBreve(d.data)}</b><br>Accesa ${fmtOre(d.ore)} · ${d.n ?? '--'} accensioni<br>Interna ${fmt(d.tInt)}° · Esterna ${fmt(d.tEst)}°<br>Efficienza ${d.eff ?? '--'}${d.eff !== null && d.eff !== undefined ? '/100' : ''}`;
+      tip.style.left = Math.min(r.width - 100, Math.max(100, px)) + 'px'; tip.style.top = '40px'; tip.style.opacity = 1;
+    };
+    svg.addEventListener('pointermove', move); svg.addEventListener('touchmove', move, { passive: true });
+    svg.addEventListener('pointerleave', () => { $('tip').style.opacity = 0; });
+    svg.addEventListener('touchend', () => { $('tip').style.opacity = 0; });
+
+    const tot = rows.reduce((a, r) => a + (r.ore || 0), 0);
+    const effs = rows.map(r => r.eff).filter(v => v !== null && v !== undefined);
+    const effMedia = effs.length ? Math.round(effs.reduce((a, b) => a + b, 0) / effs.length) : null;
+    const ests = rows.map(r => r.tEst).filter(v => v !== null);
+    const estMedia = ests.length ? ests.reduce((a, b) => a + b, 0) / ests.length : null;
+    $('kpis').innerHTML = kpi('Totale accesa', fmtOre(tot)) + kpi('Media al giorno', fmtOre(tot / n)) +
+      kpiEff(`Efficienza media ${n}gg`, effMedia, rif && rif.provvisorio) + kpi('Esterna media', fmt(estMedia) + '°');
+    chartEfficienza(rows, rif);
+  }
+
+  /** Andamento giornaliero dell'efficienza, colorato per fascia, con la linea della media (75). */
+  function chartEfficienza(rows, rif) {
+    const muted = cssVar('--muted'), line = cssVar('--line'), ink = cssVar('--ink');
+    $('effBox').innerHTML = '<div class="eff-wrap"><div id="effMeasure"></div></div>';
+    const W = Math.max(260, Math.round($('effMeasure').clientWidth || 600));
+    const n = rows.length, H2 = 150, P = { l: 30, r: 12, t: 14, b: 8 };
+    const bw = (W - P.l - P.r) / n;
+    const y = v => P.t + (1 - v / 100) * (H2 - P.t - P.b);
+    const x = i => P.l + i * bw + bw / 2;
+    let g = '';
+    // fasce di sfondo
+    g += `<rect x="${P.l}" y="${y(100)}" width="${W - P.l - P.r}" height="${y(65) - y(100)}" fill="#3FA55E" opacity=".08"/>`;
+    g += `<rect x="${P.l}" y="${y(65)}" width="${W - P.l - P.r}" height="${y(50) - y(65)}" fill="#EE8A2A" opacity=".08"/>`;
+    g += `<rect x="${P.l}" y="${y(50)}" width="${W - P.l - P.r}" height="${y(0) - y(50)}" fill="#D93A2F" opacity=".06"/>`;
+    [0, 50, 100].forEach(v => { g += `<text x="${P.l - 8}" y="${y(v) + 4}" font-size="11" fill="${muted}" text-anchor="end">${v}</text>`; });
+    g += `<line x1="${P.l}" x2="${W - P.r}" y1="${y(75)}" y2="${y(75)}" stroke="${ink}" stroke-dasharray="5 4" opacity=".5"/>`;
+    g += `<text x="${P.l + 4}" y="${y(75) - 5}" font-size="10" fill="${muted}">media</text>`;
+    // segmenti colorati tra giorni consecutivi validi
+    for (let i = 1; i < n; i++) {
+      const a = rows[i - 1].eff, b = rows[i].eff;
+      if (a === null || a === undefined || b === null || b === undefined) continue;
+      const grad = `eg${i}`;
+      g += `<defs><linearGradient id="${grad}" x1="0" x2="1"><stop offset="0" stop-color="${effColore(a)}"/><stop offset="1" stop-color="${effColore(b)}"/></linearGradient></defs>`;
+      g += `<line x1="${x(i - 1)}" y1="${y(a)}" x2="${x(i)}" y2="${y(b)}" stroke="url(#${grad})" stroke-width="3" stroke-linecap="round"/>`;
+    }
+    rows.forEach((r, i) => {
+      if (r.eff === null || r.eff === undefined) return;
+      g += `<circle cx="${x(i)}" cy="${y(r.eff)}" r="${n <= 8 ? 5 : 3}" fill="${effColore(r.eff)}" stroke="${cssVar('--card')}" stroke-width="2"><title>${giornoBreve(r.data)}: ${r.eff}/100</title></circle>`;
+      if (n <= 8) g += `<text x="${x(i)}" y="${y(r.eff) - 10}" font-size="11" font-weight="700" fill="${effColore(r.eff)}" text-anchor="middle">${r.eff}</text>`;
+    });
+    const validi = rows.filter(r => r.eff !== null && r.eff !== undefined).length;
+    const nota = !validi ? '<div class="small muted" style="margin-top:6px">Ancora nessun giorno completo con dati sufficienti.</div>'
+      : (rif && rif.provvisorio ? `<div class="small muted" style="margin-top:6px">Media provvisoria: diventa affidabile dopo 5 giorni validi (ora ${rif.n}).</div>` : '');
+    $('effBox').innerHTML = `<div class="eff-wrap"><div class="eff-head"><b>Efficienza giornaliera</b></div><div class="small muted" style="margin-top:2px">verde ≥ 65 · arancione 50–64 · rosso &lt; 50</div>
+      <svg viewBox="0 0 ${W} ${H2}" style="width:100%;height:auto;display:block;margin-top:8px">${g}</svg>${nota}</div>`;
+  }
+
+  async function renderReport() {
+    document.querySelectorAll('#rangeSeg button').forEach(b => b.classList.toggle('active', b.dataset.range === range));
+    if (range === '24h') { if (D) chart24h(); return; }
+    const n = Number(range);
+    if (!storicoCache[n]) {
+      $('chart').classList.add('skeleton');
+      try { storicoCache[n] = await call('apiStorico', n); }
+      catch (e) { $('chart').innerHTML = `<div class="empty">Errore: ${e.message || e}</div>`; return; }
+      finally { $('chart').classList.remove('skeleton'); }
+    }
+    if (range === String(n)) chartGiorni(storicoCache[n]);
+  }
+  $('rangeSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; range = b.dataset.range; renderReport(); };
+
+  /* ---------------- Caricamento ---------------- */
+  async function load(showSpin = true) {
+    const btn = $('refreshBtn');
+    if (showSpin) btn.classList.add('spin');
+    try {
+      D = await call('apiDashboard');
+      verificaAttese();
+      if (STATO.real) {
+        const sv = D.versione || 'vecchia';
+        const ok = sv === VERSIONE;
+        $('ver').textContent = ok ? `v${VERSIONE}` : `pagina v${VERSIONE} · script ${sv === 'vecchia' ? 'vecchio' : 'v' + sv}`;
+        $('ver').classList.toggle('warn', !ok);
+      }
+      if (!progDirty) prog = clone(D.stato.programma);
+      renderControl();
+      renderProg();
+      if (range === '24h') renderReport();
+    } catch (e) {
+      $('statusText').innerHTML = `<span class="dot off"></span>Errore di connessione`;
+      toast('Errore: ' + (e.message || e));
+    } finally {
+      btn.classList.remove('spin');
+    }
+  }
+  $('refreshBtn').onclick = () => { Object.keys(storicoCache).forEach(k => delete storicoCache[k]); load(); if (range !== '24h') renderReport(); };
+
+  /* ---------------- Pagine ---------------- */
+  function mostraPagina(nome) {
+    const p = nome === 'statistiche' ? 'statistiche' : 'termostato';
+    $('pageTermostato').classList.toggle('show', p === 'termostato');
+    $('pageStatistiche').classList.toggle('show', p === 'statistiche');
+    document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.page === p));
+    if (p === 'statistiche') renderReport();
+    window.scrollTo(0, 0);
+  }
+  $('nav').onclick = e => {
+    const b = e.target.closest('button[data-page]'); if (!b) return;
+    try { if (!STATO.real) location.hash = b.dataset.page === 'statistiche' ? 'statistiche' : ''; } catch (err) { }
+    mostraPagina(b.dataset.page);
+  };
+  if (!STATO.real) {
+    window.addEventListener('hashchange', () => mostraPagina(location.hash.slice(1)));
+    if (location.hash === '#statistiche') mostraPagina('statistiche');
+  }
+
+  
+  /* ---------------- Schermata di collegamento ---------------- */
+  function apriSetup(msg) {
+    $('cfgUrl').value = CFG ? CFG.url : '';
+    $('cfgKey').value = CFG ? CFG.chiave : '';
+    $('cfgErr').textContent = msg || '';
+    $('cfgClose').style.display = (CFG || DEMO) ? '' : 'none';
+    $('cfgForget').style.display = CFG ? '' : 'none';
+    $('setup').classList.add('show');
+  }
+  const chiudiSetup = () => $('setup').classList.remove('show');
+  $('settingsBtn').onclick = () => apriSetup();
+  $('cfgClose').onclick = chiudiSetup;
+  $('cfgGo').onclick = async () => {
+    const url = $('cfgUrl').value.trim(), chiave = $('cfgKey').value.trim();
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(url)) { $('cfgErr').textContent = 'L\'indirizzo deve iniziare con https://script.google.com/macros/s/ e finire con /exec'; return; }
+    if (chiave.length < 20) { $('cfgErr').textContent = 'La chiave sembra incompleta'; return; }
+    const btn = $('cfgGo'); btn.disabled = true; btn.textContent = 'Verifica…'; $('cfgErr').textContent = '';
+    try {
+      const r = await chiamaScript({ url, chiave }, 'ping', []);
+      CFG = { url, chiave }; DEMO = false; salvaCfg(CFG);
+      $('demoBanner').style.display = 'none';
+      chiudiSetup();
+      toast(`Collegato allo script v${r.versione}`);
+      Object.keys(storicoCache).forEach(k => delete storicoCache[k]);
+      load();
+    } catch (e) {
+      $('cfgErr').textContent = e.message;
+    } finally { btn.disabled = false; btn.textContent = 'Collega'; }
+  };
+  $('cfgDemo').onclick = () => { DEMO = true; $('demoBanner').style.display = 'block'; chiudiSetup(); load(); };
+  $('cfgForget').onclick = () => { salvaCfg(null); CFG = null; DEMO = false; D = null; apriSetup('Telefono scollegato.'); };
+
+  /* ---------------- Avvio ---------------- */
+  drawDial(null, null, false);
+  if (CFG) load();
+  else if (/claude|localhost|^file:/.test(location.href) && !/github\.io/.test(location.host)) { DEMO = true; $('demoBanner').style.display = 'block'; load(); }
+  else apriSetup();
+
+  // app installabile: service worker per avvio rapido e offline
+  if ('serviceWorker' in navigator && location.protocol === 'https:' && /github\.io$/.test(location.host)) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));
+  }
+  setInterval(() => { if (!document.hidden && pendingSet === null) load(false); }, 120000);
+  let resizeT;
+  window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(renderReport, 200); });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderControl(); renderReport(); });
+})();
+</script>
+</body>
+</html>
