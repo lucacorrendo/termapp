@@ -254,6 +254,14 @@
   .setup-err { color: #D93A2F; font-size: 13px; font-weight: 700; min-height: 18px; margin-top: 10px; }
   .linkbtn { background: none; border: 0; color: #D93A2F; font: inherit; font-size: 13px; font-weight: 700; margin-top: 14px; cursor: pointer; padding: 0; }
 
+  .busy { display: none; position: relative; overflow: hidden; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px;
+    border-radius: 12px; background: var(--heat-soft); color: var(--ink); font-size: 13px; font-weight: 700; }
+  .busy.show { display: flex; }
+  .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid var(--heat); border-right-color: transparent; animation: spin .8s linear infinite; flex: 0 0 auto; }
+  .busy-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 40%; background: var(--heat); border-radius: 2px; animation: scorri 1.4s ease-in-out infinite; }
+  @keyframes scorri { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+  .seg.occupato { opacity: .55; pointer-events: none; }
+
   .toast {
     position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 20px); transform: translateX(-50%) translateY(20px);
     background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-size: 14px; font-weight: 600;
@@ -267,7 +275,7 @@
 <div class="wrap">
   <header>
     <div>
-      <div class="brand"><i></i>TermApp <span class="ver" id="ver">v2.1</span></div>
+      <div class="brand"><i></i>TermApp <span class="ver" id="ver">v2.2</span></div>
       <div class="status"><span id="statusText"><span class="dot"></span>Connessione…</span></div>
     </div>
     <div class="head-right">
@@ -335,6 +343,7 @@
           <button data-mode="holiday">Vacanza</button>
           <button data-mode="off">Spento</button>
         </div>
+        <div class="busy" id="busy"><span class="spinner"></span><span id="busyText">Invio al termostato…</span><span class="busy-bar"></span></div>
         <div class="row" style="margin-top:16px">
           <span class="small">Blocco tasti sul termostato</span>
           <button class="toggle" id="lockToggle" aria-label="Blocco tasti"></button>
@@ -473,7 +482,7 @@
   const isReal = () => !!CFG && !DEMO;
   // REAL è letto in vari punti per i tempi di attesa: lo teniamo come getter
   const STATO = { get real() { return isReal(); } };
-  const VERSIONE = '2.1';
+  const VERSIONE = '2.2';
 
   const AZIONE = { apiDashboard: 'dashboard', apiStorico: 'storico', apiComandi: 'comandi', apiSalvaProgramma: 'salvaProgramma', ping: 'ping' };
 
@@ -563,6 +572,7 @@
         return delay({ giorni: out, riferimento: { k: 0.0213, n: 30, provvisorio: false } });
       },
       apiComandi(lista) {
+        const conferma = () => new Promise(r => setTimeout(() => r({ ok: true, confermato: true }), 3000));
         lista.forEach(c => {
           // come il termostato reale: cambiare temperatura in programma passa in manuale,
           // tornare al programma riprende la temperatura della fascia
@@ -575,9 +585,9 @@
           if (c.code === 'temporary_time') { st.temporaryMin = c.value; st.countdownMin = c.value; }
           if (c.code === 'mode' && c.value === 'holiday') st.vacanzaInizio = Date.now();
         });
-        return delay({ ok: true });
+        return conferma();
       },
-      ping() { return delay({ ok: true, versione: '2.1' }); },
+      ping() { return delay({ ok: true, versione: '2.2' }); },
       apiSalvaProgramma(giorni) { st.programma = JSON.parse(JSON.stringify(giorni)); return delay({ ok: true, programma: st.programma }); },
     };
   })();
@@ -655,8 +665,7 @@
     $('statusText').innerHTML = `<span class="dot ${s.online ? '' : 'off'}"></span>${s.online ? 'Online' : 'Offline'} · ${hhmm(s.aggiornato)}`;
     $('tempNow').innerHTML = `${fmt(s.temp)}<sup>°</sup>`;
     $('tempSet').textContent = s.acceso ? `${fmt(set)}°` : 'spento';
-    $('modeLabel').textContent = (MODE_LABEL[rawMode()] || '') +
-      (attese.some(a => 'mode' in a.attesi || 'acceso' in a.attesi) ? ' · in attesa di conferma…' : '');
+    $('modeLabel').textContent = MODE_LABEL[rawMode()] || '';
     $('nextChange').textContent = prossimoCambio();
     const chip = $('boilerChip');
     chip.classList.toggle('on', !!s.caldaia && s.acceso);
@@ -718,8 +727,13 @@
      Ogni comando registra il risultato atteso: finché il termostato non lo conferma l'interfaccia
      mostra il valore atteso ("in attesa di conferma"); a metà tempo il comando viene rimandato
      una volta; se dopo 60 s non c'è conferma compare un avviso. */
-  const ATTESA_MS = STATO.real ? 60000 : 3000;
-  let attese = [];
+  /* Comandi e conferma dal termostato.
+     - Lo script attende la reazione del termostato (controlli a 3, 4 e 5 s) e risponde "confermato".
+     - Dal tocco fino alla conferma l'interfaccia mostra il caricamento e il valore richiesto.
+     - Le letture partite prima dell'ultimo comando vengono ignorate (portano lo stato vecchio).
+     - Se lo script non ottiene conferma, l'app ricontrolla per 45 s e rimanda una volta. */
+  const ATTESA_MS = STATO.real ? 45000 : 8000;
+  let attese = [], timerControlli = [], ultimoComando = 0, inviiInCorso = 0;
 
   function confermato(campo, atteso) {
     const v = D.stato[campo];
@@ -731,42 +745,73 @@
     if (!D || !attese.length) return;
     const now = Date.now();
     attese = attese.filter(a => {
+      if (a.inviando) { Object.assign(D.stato, a.attesi); return true; }  // risposta dello script non ancora arrivata
       const ok = Object.keys(a.attesi).every(c => confermato(c, a.attesi[c]));
       if (ok) return false;                                       // confermato dal termostato
       if (now > a.scade) {
         toast('Il termostato non ha confermato il comando: riprova');
         return false;
       }
-      if (!a.rimandato && now - a.inizio > ATTESA_MS / 2) {       // rimanda una volta
+      if (!a.rimandato && now - a.inizio > 20000) {               // rimanda una volta
         a.rimandato = true;
         call('apiComandi', a.lista).catch(() => { });
       }
-      Object.assign(D.stato, a.attesi);                           // mostra il valore atteso
+      Object.assign(D.stato, a.attesi);                           // mostra il valore richiesto
       return true;
     });
+    aggiornaCaricamento();
   }
 
+  function annullaControlli() { timerControlli.forEach(clearTimeout); timerControlli = []; }
   function pianificaControlli() {
-    (STATO.real ? [5000, 12000, 22000, 35000, 50000, 62000] : [500, 1500, 3200]).forEach(ms => setTimeout(() => load(false), ms));
+    annullaControlli();
+    timerControlli = (STATO.real ? [3000, 6000, 10000, 20000, 32000, 46000] : [800, 2000, 4000])
+      .map(ms => setTimeout(() => load(false), ms));
+  }
+
+  function aggiornaCaricamento() {
+    const inAttesa = inviiInCorso > 0 || attese.length > 0;
+    $('busy').classList.toggle('show', inAttesa);
+    $('busyText').textContent = inviiInCorso > 0 ? 'Invio al termostato…' : 'In attesa di conferma dal termostato…';
+    $('modeSeg').classList.toggle('occupato', inviiInCorso > 0);
   }
 
   async function send(lista, okMsg, attesi) {
+    annullaControlli();
+    ultimoComando = Date.now();
+    let a = null;
+    if (attesi) {
+      // un nuovo comando sugli stessi campi sostituisce l'attesa precedente;
+      // un cambio di modalità o accensione annulla anche le attese sulla temperatura
+      // (tornando al programma il termostato riprende la temperatura della fascia)
+      const cambiaModo = 'mode' in attesi || 'acceso' in attesi;
+      attese = attese.filter(x => !Object.keys(x.attesi).some(c => c in attesi || (cambiaModo && c === 'set')));
+      a = { lista, attesi, inizio: Date.now(), scade: Date.now() + ATTESA_MS, rimandato: false, inviando: true };
+      attese.push(a);
+    }
+    inviiInCorso++;
+    aggiornaCaricamento();
     try {
-      await call('apiComandi', lista);
-      toast(okMsg || 'Comando inviato');
-      if (attesi) {
-        // un nuovo comando sugli stessi campi sostituisce l'attesa precedente;
-        // un cambio di modalità o accensione annulla anche le attese sulla temperatura
-        // (tornando al programma il termostato riprende la temperatura della fascia)
-        const cambiaModo = 'mode' in attesi || 'acceso' in attesi;
-        attese = attese.filter(a => !Object.keys(a.attesi).some(c => c in attesi || (cambiaModo && c === 'set')));
-        attese.push({ lista, attesi, inizio: Date.now(), scade: Date.now() + ATTESA_MS, rimandato: false });
+      const r = await call('apiComandi', lista);
+      if (a) a.inviando = false;
+      if (r && r.confermato) {
+        if (a) attese = attese.filter(x => x !== a);
+        toast((okMsg || 'Comando eseguito') + ' ✓');
+        ultimoComando = Date.now();       // da qui in poi lo stato letto è quello nuovo
+        load(false);
+      } else {
+        toast((okMsg || 'Comando inviato') + ' · in attesa di conferma');
+        if (a) { a.inizio = Date.now(); a.scade = Date.now() + ATTESA_MS; }
+        pianificaControlli();
       }
-      pianificaControlli();
       return true;
     } catch (e) {
+      if (a) attese = attese.filter(x => x !== a);
       toast('Errore: ' + (e.message || e));
       return false;
+    } finally {
+      inviiInCorso--;
+      aggiornaCaricamento();
     }
   }
 
@@ -1326,8 +1371,11 @@
   async function load(showSpin = true) {
     const btn = $('refreshBtn');
     if (showSpin) btn.classList.add('spin');
+    const partita = Date.now();
     try {
-      D = await call('apiDashboard');
+      const dati = await call('apiDashboard');
+      if (partita < ultimoComando) return;            // lettura partita prima dell'ultimo comando: stato vecchio
+      D = dati;
       verificaAttese();
       if (STATO.real) {
         const sv = D.versione || 'vecchia';
@@ -1410,7 +1458,7 @@
   if ('serviceWorker' in navigator && location.protocol === 'https:' && /github\.io$/.test(location.host)) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));
   }
-  setInterval(() => { if (!document.hidden && pendingSet === null) load(false); }, 120000);
+  setInterval(() => { if (!document.hidden && pendingSet === null && !inviiInCorso && !attese.length) load(false); }, 120000);
   let resizeT;
   window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(renderReport, 200); });
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderControl(); renderReport(); });
