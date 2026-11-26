@@ -1,6 +1,6 @@
 // TermApp – service worker: avvio rapido e funzionamento offline dell'interfaccia.
 // I dati del termostato arrivano sempre dallo script (mai dalla cache).
-const CACHE = 'termapp-2.2';
+const CACHE = 'termapp-2.5';
 const FILE = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 
