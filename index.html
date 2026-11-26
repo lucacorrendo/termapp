@@ -267,7 +267,7 @@
 <div class="wrap">
   <header>
     <div>
-      <div class="brand"><i></i>TermApp <span class="ver" id="ver">v2.7</span></div>
+      <div class="brand"><i></i>TermApp <span class="ver" id="ver">v2.8</span></div>
       <div class="status"><span id="statusText"><span class="dot"></span>Connessione…</span></div>
     </div>
     <div class="head-right">
@@ -473,7 +473,7 @@
   const isReal = () => !!CFG && !DEMO;
   // REAL è letto in vari punti per i tempi di attesa: lo teniamo come getter
   const STATO = { get real() { return isReal(); } };
-  const VERSIONE = '2.7';
+  const VERSIONE = '2.8';
 
   const AZIONE = { apiDashboard: 'dashboard', apiStorico: 'storico', apiComandi: 'comandi', apiSalvaProgramma: 'salvaProgramma', ping: 'ping' };
 
@@ -576,7 +576,7 @@
         });
         return conferma();
       },
-      ping() { return delay({ ok: true, versione: '2.7' }); },
+      ping() { return delay({ ok: true, versione: '2.8' }); },
       apiSalvaProgramma(giorni) { st.programma = JSON.parse(JSON.stringify(giorni)); return delay({ ok: true, programma: st.programma }); },
     };
   })();
@@ -1205,30 +1205,36 @@
     }).join(' ');
     const ext = (pts) => pts.length ? pts.concat([[now, pts[pts.length - 1][1]]]) : pts;
     g += `<path d="${path(ext(s.set), true)}" fill="none" stroke="${muted}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
-    // esterna: segmenti separati dove mancano ore ARPA
+    // esterna: colore per fonte (ARPA / UniTo) e linea interrotta dove mancano ore
+    const COL_FONTE = { ARPA: cool, UniTo: '#8E5BD0' };
+    const colFonte = f => COL_FONTE[f] || cool;
     const estPts = (s.est || []).filter(p => p[0] >= t0);
-    let dEst = '', buchiEst = 0;
+    let buchiEst = 0;
     estPts.forEach((p, i) => {
-      const salto = i === 0 || p[0] - estPts[i - 1][0] > 90 * 60000;
-      if (salto && i > 0) buchiEst++;
-      dEst += `${salto ? 'M' : 'L'}${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)} `;
+      if (i === 0) return;
+      const q = estPts[i - 1];
+      if (p[0] - q[0] > 90 * 60000) { buchiEst++; return; }
+      // tratto tra due ore consecutive: colore della fonte del punto di arrivo
+      g += `<line x1="${x(q[0]).toFixed(1)}" y1="${y(q[1]).toFixed(1)}" x2="${x(p[0]).toFixed(1)}" y2="${y(p[1]).toFixed(1)}" stroke="${colFonte(p[2])}" stroke-width="2.2" stroke-linecap="round"/>`;
     });
     if (estPts.length && estPts[0][0] - t0 > 2 * 3600e3) buchiEst++;
     if (estPts.length && now - estPts[estPts.length - 1][0] > 3 * 3600e3) buchiEst++;
-    if (dEst) g += `<path d="${dEst}" fill="none" stroke="${cool}" stroke-width="2"/>`;
-    estPts.forEach((p, i) => {   // punti isolati (senza ore vicine) visibili come pallino
+    estPts.forEach((p, i) => {   // punti isolati (senza ore vicine) e punti UniTo ben visibili
       const solo = (i === 0 || p[0] - estPts[i - 1][0] > 90 * 60000) && (i === estPts.length - 1 || estPts[i + 1][0] - p[0] > 90 * 60000);
-      if (solo) g += `<circle cx="${x(p[0])}" cy="${y(p[1])}" r="2.5" fill="${cool}"/>`;
+      if (solo || p[2] === 'UniTo') g += `<circle cx="${x(p[0])}" cy="${y(p[1])}" r="${solo ? 3 : 2.2}" fill="${colFonte(p[2])}"/>`;
     });
     g += `<path d="${path(ext(s.temp), true)}" fill="none" stroke="${ink}" stroke-width="2.2" stroke-linejoin="round"/>`;
     g += `<line id="cross" x1="0" x2="0" y1="${PAD.t}" y2="${Hc - PAD.b}" stroke="${muted}" stroke-width="1" opacity="0"/>`;
     $('chart').innerHTML = `<svg viewBox="0 0 ${W} ${Hc}" id="svg24">${g}</svg><div class="tip" id="tip"></div>`;
-    const fontiEst = (D.stato.fontiSerieMeteo || []).length ? D.stato.fontiSerieMeteo.join('/') : 'ARPA';
-    const notaEst = !estPts.length ? ' (nessuna misura)' : (buchiEst ? ` (${fontiEst}, con buchi)` : ` (${fontiEst})`);
-    $('legend').innerHTML = `<span><i style="background:${ink}"></i>Interna</span><span><i style="background:${muted}"></i>Obiettivo</span><span><i style="background:${cool}"></i>Esterna${notaEst}</span><span><i style="background:${heat};opacity:.5;height:10px"></i>Caldaia accesa${D.stato.stimata ? ' (stima)' : ''}</span>`;
+    const fontiPresenti = [...new Set(estPts.map(p => p[2] || 'ARPA'))];
+    const vociEst = !estPts.length ? `<span><i style="background:${cool}"></i>Esterna (nessuna misura)</span>`
+      : fontiPresenti.map(f => `<span><i style="background:${colFonte(f)}"></i>Esterna ${f === 'UniTo' ? 'UniTo' : 'ARPA'}</span>`).join('') +
+        (buchiEst ? `<span style="color:${muted}">· linea interrotta = ore senza misura</span>` : '');
+    $('legend').innerHTML = `<span><i style="background:${ink}"></i>Interna</span><span><i style="background:${muted}"></i>Obiettivo</span>${vociEst}<span><i style="background:${heat};opacity:.5;height:10px"></i>Caldaia accesa${D.stato.stimata ? ' (stima)' : ''}</span>`;
 
     const valAt = (pts, t) => { let v = null; for (const p of pts) { if (p[0] <= t) v = p[1]; else break; } return v; };
     const estAt = t => { let best = null; (s.est || []).forEach(p => { if (Math.abs(p[0] - t) <= 45 * 60000) best = p[1]; }); return best; };
+    const fonteAt = t => { let f = null; (s.est || []).forEach(p => { if (Math.abs(p[0] - t) <= 45 * 60000) f = p[2] || 'ARPA'; }); return f; };
     const svg = $('svg24');
     const move = ev => {
       const r = svg.getBoundingClientRect();
@@ -1239,7 +1245,7 @@
       const on = D.accensioni.some(a => t >= a[0] && t <= a[1]);
       const c = $('cross'); c.setAttribute('x1', vx); c.setAttribute('x2', vx); c.setAttribute('opacity', 1);
       const tip = $('tip');
-      tip.innerHTML = `<b>${hhmm(t)}</b><br>Interna ${fmt(valAt(s.temp, t))}° · Obiettivo ${fmt(valAt(s.set, t))}°<br>Esterna ${estAt(t) === null ? 'n.d.' : fmt(estAt(t)) + '°'}${on ? ' · <b>caldaia accesa</b>' : ''}`;
+      tip.innerHTML = `<b>${hhmm(t)}</b><br>Interna ${fmt(valAt(s.temp, t))}° · Obiettivo ${fmt(valAt(s.set, t))}°<br>Esterna ${estAt(t) === null ? 'n.d.' : fmt(estAt(t)) + '° (' + fonteAt(t) + ')'}${on ? ' · <b>caldaia accesa</b>' : ''}`;
       tip.style.left = Math.min(r.width - 90, Math.max(90, px)) + 'px'; tip.style.top = '30px'; tip.style.opacity = 1;
     };
     const leave = () => { $('tip').style.opacity = 0; $('cross').setAttribute('opacity', 0); };
