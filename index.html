@@ -235,15 +235,6 @@
   .next { margin-top: 6px; font-size: 12px; color: var(--muted); }
   .dirty-note { font-size: 12px; color: var(--heat); font-weight: 700; }
 
-  .eff-wrap { margin-top: 18px; padding: 16px; border-radius: 16px; background: var(--soft); }
-  .eff-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-  .eff-head b { font-size: 15px; }
-  .gauge { position: relative; height: 12px; border-radius: 6px; margin: 14px 0 6px;
-    background: linear-gradient(90deg, #D93A2F 0 50%, #EE8A2A 50% 65%, #4DB26A 65% 100%); }
-  .gauge .mk { position: absolute; top: -5px; width: 4px; height: 22px; border-radius: 2px; background: var(--ink); transform: translateX(-2px); box-shadow: 0 0 0 2px var(--soft); }
-  .gauge .avg { position: absolute; top: -3px; bottom: -3px; width: 0; border-left: 2px dashed var(--ink); opacity: .45; }
-  .eff-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); }
-  .eff-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
 
   .setup { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: none; overflow-y: auto;
     padding: calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 24px); }
@@ -276,7 +267,7 @@
 <div class="wrap">
   <header>
     <div>
-      <div class="brand"><i></i>TermApp <span class="ver" id="ver">v2.5</span></div>
+      <div class="brand"><i></i>TermApp <span class="ver" id="ver">v2.7</span></div>
       <div class="status"><span id="statusText"><span class="dot"></span>Connessione…</span></div>
     </div>
     <div class="head-right">
@@ -442,8 +433,7 @@
       <div class="kpis" id="kpis"></div>
       <div class="chart" id="chart"><div class="empty">Caricamento…</div></div>
       <div class="legend" id="legend"></div>
-      <div id="effBox"></div>
-      <p class="note"><b>Efficienza (0–100)</b>: confronta quanto lavora la caldaia con la differenza tra temperatura interna ed esterna. <b>75 corrisponde alla tua media</b>, calcolata sugli ultimi 30 giorni: valori più alti significano meno consumo del solito a parità di freddo, valori bassi indicano dispersioni (una finestra aperta, ad esempio). Verde da 65 in su, arancione 50–64, rosso sotto 50. Non si calcola quando fuori fa poco più freddo che in casa (meno di 3 °C di differenza).<br>Lo stato della caldaia arriva dal termostato; la storia dei giorni si costruisce dal giorno in cui è partita la raccolta dati.<br>Temperatura esterna: solo misure di <b>Arpa Piemonte</b>, stazione Torino Giardini Reali. Nessun dato da modello: le ore senza misura restano vuote (linea interrotta nel grafico) e i giorni con meno di 12 ore misurate non hanno temperatura esterna né efficienza.</p>
+      <p class="note">Lo stato della caldaia arriva dal termostato; la storia dei giorni si costruisce dal giorno in cui è partita la raccolta dati.<br>Temperatura esterna: solo misure reali. Fonte principale <b>Arpa Piemonte</b>, stazione Torino Giardini Reali; per le ore non ancora pubblicate da ARPA, <b>Osservatorio Meteorologico dell'Università di Torino</b>, Dipartimento di Fisica (licenza CC BY-NC-SA 4.0). Nessun dato da modello: le ore senza misura restano vuote (linea interrotta nel grafico) e i giorni con meno di 12 ore misurate non hanno temperatura esterna media.</p>
     </section>
   </div>
 </div>
@@ -483,7 +473,7 @@
   const isReal = () => !!CFG && !DEMO;
   // REAL è letto in vari punti per i tempi di attesa: lo teniamo come getter
   const STATO = { get real() { return isReal(); } };
-  const VERSIONE = '2.5';
+  const VERSIONE = '2.7';
 
   const AZIONE = { apiDashboard: 'dashboard', apiStorico: 'storico', apiComandi: 'comandi', apiSalvaProgramma: 'salvaProgramma', ping: 'ping' };
 
@@ -556,8 +546,7 @@
         const oggi = g.acc.filter(a => a[1] > mezzanotte.getTime());
         const ore = oggi.reduce((s, a) => s + (a[1] - Math.max(a[0], mezzanotte.getTime())), 0) / H;
         return delay({ stato: st, oggi: { ore: Math.round(ore * 100) / 100, accensioni: oggi.length },
-          serie: { temp: g.temp, set: g.set, est: g.est }, accensioni: g.acc,
-          efficienza: { indice: 78, k: 0.0205, kRif: 0.0213, provvisorio: false, giorniRif: 30, tInt: 18.4, tEst: 5.1, motivo: '' } });
+          serie: { temp: g.temp, set: g.set, est: g.est }, accensioni: g.acc});
       },
       apiStorico(n) {
         const out = [];
@@ -567,10 +556,9 @@
           const gg = Math.max(0, 20 - tEst);
           out.push({ data: d.toISOString().slice(0, 10), ore: Math.round((gg * 0.42 + Math.random() * .8) * 100) / 100,
             n: Math.round(gg * 1.3 + 4), tInt: Math.round((18.6 + Math.random() * .6) * 10) / 10, set: 18.4,
-            tEst, gg: Math.round(gg * 10) / 10, copertura: 24,
-            eff: i === 3 ? 44 : Math.round(70 + Math.random() * 16) });
+            tEst, gg: Math.round(gg * 10) / 10, copertura: 24});
         }
-        return delay({ giorni: out, riferimento: { k: 0.0213, n: 30, provvisorio: false } });
+        return delay({ giorni: out });
       },
       apiComandi(lista) {
         const conferma = () => new Promise(r => setTimeout(() => r({ ok: true, confermato: true }), 3000));
@@ -588,7 +576,7 @@
         });
         return conferma();
       },
-      ping() { return delay({ ok: true, versione: '2.5' }); },
+      ping() { return delay({ ok: true, versione: '2.7' }); },
       apiSalvaProgramma(giorni) { st.programma = JSON.parse(JSON.stringify(giorni)); return delay({ ok: true, programma: st.programma }); },
     };
   })();
@@ -679,7 +667,8 @@
     $('factExt').innerHTML = estOk ? `${fmt(s.tEsterna)}<small>°</small>` : 'n.d.';
     $('factExt').title = estOk ? `${s.fonteMeteo || 'ARPA Piemonte'}${s.oraMeteo ? ' · misura delle ' + hhmm(s.oraMeteo) : ''}`
       : `Nessuna misura ARPA recente${s.oraMeteo ? ' (ultima: ' + hhmm(s.oraMeteo) + ')' : ''}`;
-    $('factExtSrc').textContent = estOk ? `ARPA · ${hhmm(s.oraMeteo || s.aggiornato)}` : 'ARPA non disp.';
+    const sigla = s.fonteMeteo && /UniTo/.test(s.fonteMeteo) ? 'UniTo' : 'ARPA';
+    $('factExtSrc').textContent = estOk ? `${sigla} · ${hhmm(s.oraMeteo || s.aggiornato)}` : 'nessuna misura';
     $('factHours').textContent = fmtOre(D.oggi.ore);
     $('factCount').textContent = D.oggi.accensioni;
     document.querySelectorAll('#modeSeg button').forEach(b => {
@@ -1182,12 +1171,6 @@
     Hc = W < 500 ? 220 : 260;
   }
 
-  const effColore = v => v === null || v === undefined ? cssVar('--muted') : v >= 65 ? '#3FA55E' : v >= 50 ? '#EE8A2A' : '#D93A2F';
-  const effGiudizio = v => v === null || v === undefined ? '' : v >= 85 ? 'migliore del solito' : v >= 65 ? 'nella norma' : v >= 50 ? 'un po\' sotto la media' : 'bassa: possibili dispersioni';
-  function kpiEff(titolo, v, provvisorio) {
-    const val = v === null || v === undefined ? '--' : `<span class="eff-dot" style="background:${effColore(v)}"></span>${v}`;
-    return kpi(titolo, val, v === null || v === undefined ? '' : (provvisorio ? '/100 · provv.' : '/100'));
-  }
   function kpi(k, v, sub) {
     return `<div class="fact"><div class="k">${k}</div><div class="v">${v}${sub ? ` <small>${sub}</small>` : ''}</div></div>`;
   }
@@ -1240,7 +1223,8 @@
     g += `<path d="${path(ext(s.temp), true)}" fill="none" stroke="${ink}" stroke-width="2.2" stroke-linejoin="round"/>`;
     g += `<line id="cross" x1="0" x2="0" y1="${PAD.t}" y2="${Hc - PAD.b}" stroke="${muted}" stroke-width="1" opacity="0"/>`;
     $('chart').innerHTML = `<svg viewBox="0 0 ${W} ${Hc}" id="svg24">${g}</svg><div class="tip" id="tip"></div>`;
-    const notaEst = !estPts.length ? ' (nessun dato ARPA)' : (buchiEst ? ' (ARPA, con buchi)' : ' (ARPA)');
+    const fontiEst = (D.stato.fontiSerieMeteo || []).length ? D.stato.fontiSerieMeteo.join('/') : 'ARPA';
+    const notaEst = !estPts.length ? ' (nessuna misura)' : (buchiEst ? ` (${fontiEst}, con buchi)` : ` (${fontiEst})`);
     $('legend').innerHTML = `<span><i style="background:${ink}"></i>Interna</span><span><i style="background:${muted}"></i>Obiettivo</span><span><i style="background:${cool}"></i>Esterna${notaEst}</span><span><i style="background:${heat};opacity:.5;height:10px"></i>Caldaia accesa${D.stato.stimata ? ' (stima)' : ''}</span>`;
 
     const valAt = (pts, t) => { let v = null; for (const p of pts) { if (p[0] <= t) v = p[1]; else break; } return v; };
@@ -1263,27 +1247,19 @@
     svg.addEventListener('touchmove', move, { passive: true }); svg.addEventListener('touchend', leave);
 
     const ore24 = D.accensioni.reduce((a, p) => a + (p[1] - p[0]), 0) / 3600e3;
-    const E = D.efficienza || {};
+    const tIntMedia = s.temp.length ? s.temp.reduce((a, p) => a + p[1], 0) / s.temp.length : null;
     $('kpis').innerHTML = kpi('Accesa 24h', fmtOre(ore24)) + kpi('Accensioni', D.accensioni.length) +
-      kpiEff('Efficienza', E.indice, E.provvisorio) + kpi('Esterna ora', D.stato.tEsterna === null || D.stato.tEsterna === undefined ? 'n.d.' : fmt(D.stato.tEsterna) + '°', D.stato.tEsterna === null || D.stato.tEsterna === undefined ? 'ARPA' : '');
-    const v = E.indice;
-    $('effBox').innerHTML = `
-      <div class="eff-wrap">
-        <div class="eff-head"><b>Efficienza ultime 24 ore</b><span class="small" style="color:${effColore(v)};font-weight:700">${v === null || v === undefined ? (E.motivo || 'non disponibile') : effGiudizio(v)}</span></div>
-        <div class="gauge">${v === null || v === undefined ? '' : `<span class="mk" style="left:${v}%"></span>`}<span class="avg" style="left:75%" title="la tua media"></span></div>
-        <div class="eff-scale"><span>0</span><span>50</span><span>65</span><span>media 75</span><span>100</span></div>
-        <div class="small muted" style="margin-top:10px">Interna media ${fmt(E.tInt)}° · esterna media ${E.tEst === null || E.tEst === undefined ? 'n.d. (ARPA)' : fmt(E.tEst) + '°'} · caldaia accesa ${fmtOre(ore24)}${E.provvisorio ? `<br>Riferimento provvisorio: la tua media sarà calcolata dopo 5 giorni di dati validi (ora ${E.giorniRif || 0}).` : ''}</div>
-      </div>`;
+      kpi('Interna media', fmt(tIntMedia) + '°') +
+      kpi('Esterna ora', D.stato.tEsterna === null || D.stato.tEsterna === undefined ? 'n.d.' : fmt(D.stato.tEsterna) + '°');
   }
 
   function chartGiorni(dati) {
     misura();
     const rows = Array.isArray(dati) ? dati : (dati.giorni || []);
-    const rif = Array.isArray(dati) ? null : dati.riferimento;
     const heat = cssVar('--heat'), cool = cssVar('--cool'), muted = cssVar('--muted'), line = cssVar('--line');
     if (!rows.length) {
       $('chart').innerHTML = '<div class="empty">Ancora nessun giorno registrato.<br>Il riepilogo si riempie con l\'aggiornamento automatico.</div>';
-      $('legend').innerHTML = ''; $('kpis').innerHTML = ''; $('effBox').innerHTML = ''; return;
+      $('legend').innerHTML = ''; $('kpis').innerHTML = ''; return;
     }
     const maxOre = Math.max(2, Math.ceil(Math.max(...rows.map(r => r.ore || 0)) + 0.5));
     const temps = rows.map(r => r.tEst).filter(v => v !== null);
@@ -1312,8 +1288,8 @@
     }
     $('chart').innerHTML = `<svg viewBox="0 0 ${W} ${Hc}" id="svgG">${g}</svg><div class="tip" id="tip"></div>`;
     const senzaEst = rows.filter(r => r.tEst === null).length;
-    $('legend').innerHTML = `<span><i style="background:${heat};height:10px"></i>Ore di accensione</span><span><i style="background:${cool}"></i>Temperatura esterna media (ARPA)</span>` +
-      (senzaEst ? `<span style="color:${cssVar('--heat')};font-weight:700">${senzaEst} ${senzaEst === 1 ? 'giorno' : 'giorni'} senza dati ARPA sufficienti</span>` : '');
+    $('legend').innerHTML = `<span><i style="background:${heat};height:10px"></i>Ore di accensione</span><span><i style="background:${cool}"></i>Temperatura esterna media</span>` +
+      (senzaEst ? `<span style="color:${cssVar('--heat')};font-weight:700">${senzaEst} ${senzaEst === 1 ? 'giorno' : 'giorni'} senza misure esterne sufficienti</span>` : '');
 
     const svg = $('svgG');
     const move = ev => {
@@ -1322,7 +1298,7 @@
       const i = Math.floor((px / r.width * W - PAD.l) / bw);
       if (i < 0 || i >= n) return;
       const d = rows[i], tip = $('tip');
-      tip.innerHTML = `<b>${giornoBreve(d.data)}</b><br>Accesa ${fmtOre(d.ore)} · ${d.n ?? '--'} accensioni<br>Interna ${fmt(d.tInt)}° · Esterna ${d.tEst === null ? 'n.d.' : fmt(d.tEst) + '°'}${d.oreEst !== null && d.oreEst !== undefined && d.oreEst < 24 ? ` (ARPA ${d.oreEst}/24 h)` : ''}<br>Efficienza ${d.eff ?? '--'}${d.eff !== null && d.eff !== undefined ? '/100' : ''}`;
+      tip.innerHTML = `<b>${giornoBreve(d.data)}</b><br>Accesa ${fmtOre(d.ore)} · ${d.n ?? '--'} accensioni<br>Interna ${fmt(d.tInt)}° · Esterna ${d.tEst === null ? 'n.d.' : fmt(d.tEst) + '°'}${d.oreEst !== null && d.oreEst !== undefined && d.oreEst < 24 ? ` (misure ${d.oreEst}/24 h)` : ''}`;
       tip.style.left = Math.min(r.width - 100, Math.max(100, px)) + 'px'; tip.style.top = '40px'; tip.style.opacity = 1;
     };
     svg.addEventListener('pointermove', move); svg.addEventListener('touchmove', move, { passive: true });
@@ -1330,51 +1306,14 @@
     svg.addEventListener('touchend', () => { $('tip').style.opacity = 0; });
 
     const tot = rows.reduce((a, r) => a + (r.ore || 0), 0);
-    const effs = rows.map(r => r.eff).filter(v => v !== null && v !== undefined);
-    const effMedia = effs.length ? Math.round(effs.reduce((a, b) => a + b, 0) / effs.length) : null;
     const ests = rows.map(r => r.tEst).filter(v => v !== null);
     const estMedia = ests.length ? ests.reduce((a, b) => a + b, 0) / ests.length : null;
+    const ints = rows.map(r => r.tInt).filter(v => v !== null);
+    const intMedia = ints.length ? ints.reduce((a, b) => a + b, 0) / ints.length : null;
     $('kpis').innerHTML = kpi('Totale accesa', fmtOre(tot)) + kpi('Media al giorno', fmtOre(tot / n)) +
-      kpiEff(`Efficienza media ${n}gg`, effMedia, rif && rif.provvisorio) + kpi('Esterna media', estMedia === null ? 'n.d.' : fmt(estMedia) + '°');
-    chartEfficienza(rows, rif);
+      kpi('Interna media', fmt(intMedia) + '°') + kpi('Esterna media', estMedia === null ? 'n.d.' : fmt(estMedia) + '°');
   }
 
-  /** Andamento giornaliero dell'efficienza, colorato per fascia, con la linea della media (75). */
-  function chartEfficienza(rows, rif) {
-    const muted = cssVar('--muted'), line = cssVar('--line'), ink = cssVar('--ink');
-    $('effBox').innerHTML = '<div class="eff-wrap"><div id="effMeasure"></div></div>';
-    const W = Math.max(260, Math.round($('effMeasure').clientWidth || 600));
-    const n = rows.length, H2 = 150, P = { l: 30, r: 12, t: 14, b: 8 };
-    const bw = (W - P.l - P.r) / n;
-    const y = v => P.t + (1 - v / 100) * (H2 - P.t - P.b);
-    const x = i => P.l + i * bw + bw / 2;
-    let g = '';
-    // fasce di sfondo
-    g += `<rect x="${P.l}" y="${y(100)}" width="${W - P.l - P.r}" height="${y(65) - y(100)}" fill="#3FA55E" opacity=".08"/>`;
-    g += `<rect x="${P.l}" y="${y(65)}" width="${W - P.l - P.r}" height="${y(50) - y(65)}" fill="#EE8A2A" opacity=".08"/>`;
-    g += `<rect x="${P.l}" y="${y(50)}" width="${W - P.l - P.r}" height="${y(0) - y(50)}" fill="#D93A2F" opacity=".06"/>`;
-    [0, 50, 100].forEach(v => { g += `<text x="${P.l - 8}" y="${y(v) + 4}" font-size="11" fill="${muted}" text-anchor="end">${v}</text>`; });
-    g += `<line x1="${P.l}" x2="${W - P.r}" y1="${y(75)}" y2="${y(75)}" stroke="${ink}" stroke-dasharray="5 4" opacity=".5"/>`;
-    g += `<text x="${P.l + 4}" y="${y(75) - 5}" font-size="10" fill="${muted}">media</text>`;
-    // segmenti colorati tra giorni consecutivi validi
-    for (let i = 1; i < n; i++) {
-      const a = rows[i - 1].eff, b = rows[i].eff;
-      if (a === null || a === undefined || b === null || b === undefined) continue;
-      const grad = `eg${i}`;
-      g += `<defs><linearGradient id="${grad}" x1="0" x2="1"><stop offset="0" stop-color="${effColore(a)}"/><stop offset="1" stop-color="${effColore(b)}"/></linearGradient></defs>`;
-      g += `<line x1="${x(i - 1)}" y1="${y(a)}" x2="${x(i)}" y2="${y(b)}" stroke="url(#${grad})" stroke-width="3" stroke-linecap="round"/>`;
-    }
-    rows.forEach((r, i) => {
-      if (r.eff === null || r.eff === undefined) return;
-      g += `<circle cx="${x(i)}" cy="${y(r.eff)}" r="${n <= 8 ? 5 : 3}" fill="${effColore(r.eff)}" stroke="${cssVar('--card')}" stroke-width="2"><title>${giornoBreve(r.data)}: ${r.eff}/100</title></circle>`;
-      if (n <= 8) g += `<text x="${x(i)}" y="${y(r.eff) - 10}" font-size="11" font-weight="700" fill="${effColore(r.eff)}" text-anchor="middle">${r.eff}</text>`;
-    });
-    const validi = rows.filter(r => r.eff !== null && r.eff !== undefined).length;
-    const nota = !validi ? '<div class="small muted" style="margin-top:6px">Ancora nessun giorno completo con dati sufficienti.</div>'
-      : (rif && rif.provvisorio ? `<div class="small muted" style="margin-top:6px">Media provvisoria: diventa affidabile dopo 5 giorni validi (ora ${rif.n}).</div>` : '');
-    $('effBox').innerHTML = `<div class="eff-wrap"><div class="eff-head"><b>Efficienza giornaliera</b></div><div class="small muted" style="margin-top:2px">verde ≥ 65 · arancione 50–64 · rosso &lt; 50</div>
-      <svg viewBox="0 0 ${W} ${H2}" style="width:100%;height:auto;display:block;margin-top:8px">${g}</svg>${nota}</div>`;
-  }
 
   async function renderReport() {
     document.querySelectorAll('#rangeSeg button').forEach(b => b.classList.toggle('active', b.dataset.range === range));
